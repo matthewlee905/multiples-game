@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>倍數小偵探｜小四數學（三節）</title>
+  <style>
+    :root {
+      --bg: #fff8e7;
+      --card: #ffffff;
+      --primary: #ff6b35;
+      --primary-dark: #e55a28;
+      --secondary: #4ecdc4;
+      --accent: #ffe66d;
+      --purple: #9b59b6;
+      --blue: #3498db;
+      --green: #2ecc71;
+      --red: #e74c3c;
+      --text: #2c3e50;
+      --muted: #7f8c8d;
+      --shadow: 0 6px 20px rgba(0,0,0,0.12);
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Helvetica Neue",
+                   "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: linear-gradient(160deg, #fff8e7 0%, #e8f8f5 45%, #fce4ec 100%);
+      color: var(--text);
+      font-size: 20px;
+      line-height: 1.5;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    body { padding: 16px; padding-bottom: 40px; max-width: 740px; margin: 0 auto; }
+    .teacher-note {
+      font-size: 13px; color: var(--muted); text-align: center;
+      margin-bottom: 10px; letter-spacing: 0.02em;
+    }
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .card {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 26px 20px; margin-bottom: 14px;
+    }
+    h1 {
+      font-size: 1.75rem; text-align: center; color: var(--primary);
+      margin-bottom: 6px; line-height: 1.3;
+    }
+    .subtitle { text-align: center; font-size: 1rem; color: var(--muted); margin-bottom: 16px; }
+    .goal-box {
+      background: linear-gradient(135deg, #e8f5e9, #e3f2fd);
+      border-radius: 14px; padding: 12px 14px; margin-bottom: 18px;
+      font-size: 0.95rem; border-left: 6px solid var(--secondary);
+    }
+    .goal-box strong { color: var(--blue); }
+    .label { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; display: block; }
+    .pick-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+    .pick-btn {
+      display: flex; align-items: flex-start; gap: 12px; width: 100%;
+      padding: 14px 16px; border: 3px solid #e0e0e0; border-radius: 16px;
+      background: #fafafa; font-size: 1.1rem; font-weight: 700; color: var(--text);
+      cursor: pointer; text-align: left; font-family: inherit; min-height: 60px;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    }
+    .pick-btn .emoji { font-size: 1.7rem; flex-shrink: 0; line-height: 1.2; }
+    .pick-btn .desc { font-size: 0.82rem; font-weight: 500; color: var(--muted); display: block; margin-top: 2px; }
+    .pick-btn.selected { border-color: var(--primary); background: #fff3ee; transform: scale(1.015); }
+    .pick-btn[data-lesson="1"].selected { border-color: #27ae60; background: #e8f8ef; }
+    .pick-btn[data-lesson="2"].selected { border-color: var(--blue); background: #eaf4fc; }
+    .pick-btn[data-lesson="3"].selected { border-color: var(--purple); background: #f5eef8; }
+    .pick-btn[data-level="support"].selected { border-color: #27ae60; background: #e8f8ef; }
+    .pick-btn[data-level="basic"].selected { border-color: var(--blue); background: #eaf4fc; }
+    .pick-btn[data-level="challenge"].selected { border-color: var(--purple); background: #f5eef8; }
+    .step-label {
+      display: inline-block; background: #eee; color: var(--muted);
+      font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; min-height: 58px; padding: 14px 20px; border: none; border-radius: 16px;
+      font-size: 1.2rem; font-weight: 800; font-family: inherit; cursor: pointer;
+      color: #fff; background: var(--primary); box-shadow: 0 4px 0 var(--primary-dark);
+      transition: transform 0.1s, box-shadow 0.1s; -webkit-user-select: none; user-select: none;
+    }
+    .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--primary-dark); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-secondary { background: var(--secondary); box-shadow: 0 4px 0 #3ba99f; }
+    .btn-secondary:active { box-shadow: 0 1px 0 #3ba99f; }
+    .btn-purple { background: var(--purple); box-shadow: 0 4px 0 #7d3c98; }
+    .btn-purple:active { box-shadow: 0 1px 0 #7d3c98; }
+    .btn-outline {
+      background: #fff; color: var(--text); border: 3px solid #ddd; box-shadow: none;
+    }
+    .btn-outline:active { transform: translateY(2px); }
+    .btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .btn-row .btn { flex: 1; min-width: 130px; }
+    .progress-bar-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .progress-track { flex: 1; height: 12px; background: #eee; border-radius: 10px; overflow: hidden; }
+    .progress-fill {
+      height: 100%; background: linear-gradient(90deg, var(--secondary), var(--green));
+      border-radius: 10px; transition: width 0.3s ease; width: 0%;
+    }
+    .progress-text { font-size: 0.9rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .badge {
+      display: inline-block; padding: 4px 10px; border-radius: 20px;
+      font-size: 0.8rem; font-weight: 700; margin-bottom: 8px; margin-right: 6px;
+    }
+    .badge-support { background: #d5f5e3; color: #1e8449; }
+    .badge-basic { background: #d6eaf8; color: #1a5276; }
+    .badge-challenge { background: #e8daef; color: #6c3483; }
+    .badge-lesson { background: #fff3cd; color: #856404; }
+    .type-tag {
+      display: inline-block; background: var(--accent); color: #6b4e00;
+      font-size: 0.78rem; font-weight: 700; padding: 3px 10px; border-radius: 8px; margin-bottom: 10px;
+    }
+    .question-text {
+      font-size: 1.28rem; font-weight: 700; line-height: 1.45; margin-bottom: 16px; color: var(--text);
+    }
+    .visual-box {
+      background: #f0faf8; border: 2px solid #b2dfdb; border-radius: 14px;
+      padding: 12px; margin-bottom: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .visual-box table { width: 100%; border-collapse: collapse; min-width: 260px; }
+    .visual-box th, .visual-box td {
+      border: 2px solid #80cbc4; padding: 8px 6px; text-align: center;
+      font-size: 0.95rem; font-weight: 700;
+    }
+    .visual-box th { background: #4ecdc4; color: #fff; }
+    .visual-box td { background: #fff; }
+    .visual-box .hl { background: #ffe66d; }
+    .visual-caption { font-size: 0.82rem; color: var(--muted); margin-top: 6px; text-align: center; }
+    .story-banner {
+      background: linear-gradient(90deg, #e8f5e9, #fffde7);
+      border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
+      font-size: 0.95rem; font-weight: 600;
+    }
+    .options { display: flex; flex-direction: column; gap: 10px; }
+    .option-btn {
+      width: 100%; min-height: 56px; padding: 12px 16px; border: 3px solid #e0e0e0;
+      border-radius: 14px; background: #fff; font-size: 1.1rem; font-weight: 600;
+      font-family: inherit; color: var(--text); cursor: pointer; text-align: left;
+      transition: border-color 0.15s, background 0.15s; -webkit-user-select: none; user-select: none;
+    }
+    .option-btn:active { background: #f5f5f5; }
+    .option-btn.selected { border-color: var(--blue); background: #eaf4fc; }
+    .option-btn.correct { border-color: var(--green); background: #e8f8ef; }
+    .option-btn.wrong { border-color: var(--red); background: #fdecea; }
+    .option-btn:disabled { cursor: default; }
+    .chip-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+    .chip {
+      min-width: 62px; min-height: 54px; padding: 10px 14px; border: 3px solid #e0e0e0;
+      border-radius: 14px; background: #fff; font-size: 1.15rem; font-weight: 700;
+      font-family: inherit; color: var(--text); cursor: pointer; text-align: center;
+    }
+    .chip.selected { border-color: var(--blue); background: #eaf4fc; }
+    .chip.correct { border-color: var(--green); background: #e8f8ef; }
+    .chip.wrong { border-color: var(--red); background: #fdecea; }
+    .chip.missed { border-color: var(--accent); background: #fffde7; }
+    .chip:disabled { cursor: default; }
+    .hint-box {
+      background: #fff8e1; border: 2px dashed #f9a825; border-radius: 14px;
+      padding: 12px 14px; margin: 12px 0; font-size: 0.92rem; color: #6b4e00; display: none;
+    }
+    .hint-box.show { display: block; }
+    .feedback {
+      margin-top: 14px; padding: 14px; border-radius: 14px; font-size: 1.05rem;
+      font-weight: 600; display: none; line-height: 1.45;
+    }
+    .feedback.show { display: block; }
+    .feedback.ok { background: #e8f8ef; color: #1e8449; border: 2px solid #2ecc71; }
+    .feedback.bad { background: #fdecea; color: #922b21; border: 2px solid #e74c3c; }
+    .score-big { font-size: 3rem; font-weight: 900; text-align: center; color: var(--primary); margin: 8px 0 4px; }
+    .score-label { text-align: center; font-size: 1.05rem; color: var(--muted); margin-bottom: 14px; }
+    .stars { text-align: center; font-size: 2.2rem; margin-bottom: 12px; letter-spacing: 4px; }
+    .summary-list {
+      background: #f8f9fa; border-radius: 14px; padding: 12px 14px;
+      margin-bottom: 16px; font-size: 0.92rem;
+    }
+    .summary-list li { margin-bottom: 6px; list-style: none; }
+    .summary-list li::before { content: "• "; color: var(--secondary); font-weight: bold; }
+    .footer-tip { text-align: center; font-size: 0.8rem; color: var(--muted); margin-top: 16px; }
+    .hidden { display: none !important; }
+    @media (min-width: 600px) {
+      body { padding: 24px; }
+      h1 { font-size: 2.05rem; }
+      .question-text { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <p class="teacher-note">教師備註：學習目標 — 讀懂倍數文字條件；由 1 倍起計；「以內」含上限；不代學生篩條件</p>
+
+  <!-- START -->
+  <div id="screen-start" class="screen active">
+    <div class="card">
+      <h1>🔎 倍數小偵探</h1>
+      <p class="subtitle">小四數學 · 三節互動課件</p>
+      <div class="goal-box">
+        <strong>📚 學習目標：</strong>讀懂文字條件，找出正確嘅倍數答案。<br>
+        倍數由 <strong>1 倍</strong>開始（第 1 個倍數＝該數本身）。唔好淨係背乘數表——要先睇清楚題目問咩！
+      </div>
+
+      <span class="step-label">步驟 1</span>
+      <span class="label">📖 揀關卡（節）：</span>
+      <div class="pick-group" id="lesson-group" role="radiogroup" aria-label="關卡">
+        <button type="button" class="pick-btn selected" data-lesson="1" aria-pressed="true">
+          <span class="emoji">🐸</span>
+          <span>第1節　倍數序位探險<div class="desc">青蛙4腿 · 第幾個 · 相鄰差 · 有冇最大倍數</div></span>
+        </button>
+        <button type="button" class="pick-btn" data-lesson="2" aria-pressed="false">
+          <span class="emoji">🔀</span>
+          <span>第2節　同一倍數・不同問法<div class="desc">第n個／最初n個／以內有哪些／有多少個</div></span>
+        </button>
+        <button type="button" class="pick-btn" data-lesson="3" aria-pressed="false">
+          <span class="emoji">🎯</span>
+          <span>第3節　最接近與相鄰差<div class="desc">最接近 · 上下候選比距離 · 相鄰差</div></span>
+        </button>
+      </div>
+
+      <span class="step-label">步驟 2</span>
+      <span class="label">🎯 揀難度：</span>
+      <div class="pick-group" id="level-group" role="radiogroup" aria-label="難度">
+        <button type="button" class="pick-btn selected" data-level="support" aria-pressed="true">
+          <span class="emoji">🌱</span>
+          <span>支援<div class="desc">較小數／較多提示／基礎條件</div></span>
+        </button>
+        <button type="button" class="pick-btn" data-level="basic" aria-pressed="false">
+          <span class="emoji">📘</span>
+          <span>基本<div class="desc">課堂主流題 · 混合問法</div></span>
+        </button>
+        <button type="button" class="pick-btn" data-level="challenge" aria-pressed="false">
+          <span class="emoji">🔥</span>
+          <span>挑戰<div class="desc">差／遷移／易混淆選項</div></span>
+        </button>
+      </div>
+
+      <button type="button" class="btn" id="btn-start">🚀 開始遊戲</button>
+    </div>
+    <p class="footer-tip">每局約 6 題 · 適合 35 分鐘一節課短片段 · 唔收集個人資料</p>
+  </div>
+
+  <!-- PLAY -->
+  <div id="screen-play" class="screen">
+    <div class="progress-bar-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <span class="progress-text" id="progress-text">1 / 6</span>
+    </div>
+    <div class="card">
+      <span class="badge badge-lesson" id="lesson-badge">第1節</span>
+      <span class="badge" id="level-badge">支援</span>
+      <div><span class="type-tag" id="type-tag">第幾個</span></div>
+      <div class="story-banner hidden" id="story-banner"></div>
+      <p class="question-text" id="question-text"></p>
+      <div class="visual-box hidden" id="visual-box"></div>
+      <div id="options-area" class="options"></div>
+      <div class="hint-box" id="hint-box"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="btn-row" id="action-row">
+        <button type="button" class="btn btn-outline" id="btn-hint" style="display:none;">💡 看提示</button>
+        <button type="button" class="btn btn-secondary" id="btn-check" style="display:none;">✅ 確認答案</button>
+      </div>
+      <div class="btn-row" id="next-row" style="display:none;">
+        <button type="button" class="btn" id="btn-retry">🔄 再試一次</button>
+        <button type="button" class="btn btn-purple" id="btn-next">下一題 ➡️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="screen-result" class="screen">
+    <div class="card">
+      <h1>🎉 完成啦！</h1>
+      <div class="stars" id="stars"></div>
+      <div class="score-big" id="score-big">0 / 6</div>
+      <p class="score-label" id="score-label">答對題數</p>
+      <ul class="summary-list" id="summary-list"></ul>
+      <button type="button" class="btn" id="btn-again">🔁 同一關再玩</button>
+      <div class="btn-row">
+        <button type="button" class="btn btn-outline" id="btn-home">🏠 換關卡／難度</button>
+      </div>
+    </div>
+    <p class="footer-tip">溫馨提示：倍數由 1 倍開始；相鄰兩個倍數相差＝基數本身</p>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ========== 雙欄視覺：序位｜數值 ========== */
+  function dualTable(base, upto, highlightNth) {
+    let heads = "", ords = "", vals = "";
+    for (let i = 1; i <= upto; i++) {
+      const hl = highlightNth && highlightNth.indexOf(i) >= 0 ? ' class="hl"' : "";
+      heads += "<th" + hl + ">第" + i + "個</th>";
+      ords += "<td" + hl + ">" + i + "</td>";
+      vals += "<td" + hl + ">" + (base * i) + "</td>";
+    }
+    return '<table><tr><th>序位</th>' + heads + '</tr>' +
+           '<tr><th>倍數</th>' + vals + '</tr></table>' +
+           '<p class="visual-caption">🐸 每行相差 ' + base + '（基數本身）</p>';
+  }
+
+  /* ========== 題庫（按節 × 難度）==========
+     mode: single | multi
+     visual: optional HTML
+     story: optional banner
+  */
+  const LESSONS = {
+    1: {
+      name: "倍數序位探險",
+      emoji: "🐸",
+      goal: "用序位讀倍數：第 n 個＝基數×n；相鄰差＝基數；倍數無限延長。",
+      banks: {
+        support: [
+          {
+            id: "L1S1", type: "nth", typeLabel: "第幾個",
+            story: "🐸 一隻青蛙有 4 條腿。排成一列青蛙，總腿數就係 4 的倍數。",
+            q: "第 1 個倍數（最小倍數）是多少？",
+            mode: "single",
+            choices: ["0", "1", "4", "8"],
+            answer: "4",
+            visual: dualTable(4, 5, [1]),
+            hint: "第 1 個倍數＝4 × 1＝4（該數本身）。由 1 倍開始，唔由 0 開始。",
+            tipWrong: "「第 1 個／最小倍數」＝基數本身。睇雙欄：序位 1 → 倍數 4。"
+          },
+          {
+            id: "L1S2", type: "nth", typeLabel: "第幾個",
+            story: "🐸 青蛙 4 腿",
+            q: "4 的第 3 個倍數是多少？",
+            mode: "single",
+            choices: ["8", "12", "16", "3"],
+            answer: "12",
+            visual: dualTable(4, 5, [3]),
+            hint: "第 3 個＝4 × 3。雙欄：序位 3 → 倍數 12。",
+            tipWrong: "「第幾個」→ 基數 × 序位。第 3 個＝4×3。"
+          },
+          {
+            id: "L1S3", type: "nth", typeLabel: "第幾個",
+            story: "🐸 青蛙 4 腿",
+            q: "4 的第 5 個倍數是多少？",
+            mode: "single",
+            choices: ["16", "20", "24", "5"],
+            answer: "20",
+            visual: dualTable(4, 6, [5]),
+            hint: "第 5 個＝4 × 5＝20。",
+            tipWrong: "對住雙欄：序位 5 下面嗰個數就係答案。"
+          },
+          {
+            id: "L1S4", type: "diff", typeLabel: "相鄰差",
+            story: "🐸 青蛙 4 腿",
+            q: "4 的第 2 個倍數同第 3 個倍數相差多少？",
+            mode: "single",
+            choices: ["1", "2", "4", "8"],
+            answer: "4",
+            visual: dualTable(4, 5, [2, 3]),
+            hint: "相鄰兩個倍數相差＝基數本身＝4。（12−8＝4）",
+            tipWrong: "相鄰差永遠等於基數。第 2 個係 8，第 3 個係 12，差 4。"
+          },
+          {
+            id: "L1S5", type: "infinite", typeLabel: "有沒有最大",
+            q: "4 的倍數有沒有「最大」的一個？",
+            mode: "single",
+            choices: ["有，最大係 40", "有，最大係 100", "沒有，可以一直延長", "只有 10 個倍數"],
+            answer: "沒有，可以一直延長",
+            hint: "倍數＝4×1、4×2、4×3… 可以一直乘落去，所以冇最大倍數。",
+            tipWrong: "倍數數列可以無限延長：第 11 個、第 12 個、第 100 個……都有。"
+          },
+          {
+            id: "L1S6", type: "nth", typeLabel: "短遷移・6",
+            story: "🦟 一隻蜻蜓有 6 條腿。",
+            q: "6 的第 2 個倍數是多少？",
+            mode: "single",
+            choices: ["6", "12", "18", "2"],
+            answer: "12",
+            hint: "同青蛙道理一樣：第 2 個＝6 × 2＝12。",
+            tipWrong: "換咗基數 6，方法一樣：第 n 個＝6 × n。"
+          }
+        ],
+        basic: [
+          {
+            id: "L1B1", type: "nth", typeLabel: "第幾個",
+            story: "🐸 青蛙 4 腿 · 序位｜數值",
+            q: "第 1 個倍數（最小倍數）是多少？",
+            mode: "single",
+            choices: ["0", "4", "8", "1"],
+            answer: "4",
+            visual: dualTable(4, 4, [1]),
+            hint: "第 1 個＝4×1＝4（該數本身）。",
+            tipWrong: "最小／第 1 個倍數＝基數本身，唔係 0。"
+          },
+          {
+            id: "L1B2", type: "nth", typeLabel: "第幾個",
+            story: "🐸 青蛙 4 腿",
+            q: "4 的第 11 個倍數是多少？",
+            mode: "single",
+            choices: ["40", "44", "48", "404"],
+            answer: "44",
+            hint: "第 11 個＝4 × 11＝44。可以延長雙欄：…第10個40，第11個44。",
+            tipWrong: "延長數列：唔使成條寫晒，用「基數 × 序位」直接計。"
+          },
+          {
+            id: "L1B3", type: "nth", typeLabel: "第幾個",
+            story: "🐸 青蛙 4 腿",
+            q: "4 的第 12 個倍數是多少？",
+            mode: "single",
+            choices: ["44", "48", "52", "36"],
+            answer: "48",
+            hint: "第 12 個＝4 × 12＝48。亦可以：第 11 個 44 再加 4。",
+            tipWrong: "第 12 個＝4×12，或者由第 11 個（44）再加一個基數 4。"
+          },
+          {
+            id: "L1B4", type: "infinite", typeLabel: "有沒有最大",
+            q: "倍數數列可以一直延長嗎？4 的倍數有沒有最大的一個？",
+            mode: "single",
+            choices: ["可以延長，但有最大倍數", "不可以延長，只有有限個", "可以一直延長，沒有最大倍數", "最大倍數係第 12 個"],
+            answer: "可以一直延長，沒有最大倍數",
+            hint: "序位可以係 13、14、100… 所以冇「最後一個」。",
+            tipWrong: "重點：倍數無限多，冇最大。"
+          },
+          {
+            id: "L1B5", type: "diff", typeLabel: "相鄰差",
+            story: "🐸 青蛙 4 腿",
+            q: "4 的相鄰兩個倍數相差多少？",
+            mode: "single",
+            choices: ["1", "2", "4", "8"],
+            answer: "4",
+            visual: dualTable(4, 5, [3, 4]),
+            hint: "相鄰差＝基數＝4。例如 12 同 16 差 4。",
+            tipWrong: "無論邊兩個相鄰倍數，相差永遠係基數本身。"
+          },
+          {
+            id: "L1B6", type: "nth", typeLabel: "短遷移・6",
+            story: "🦟 蜻蜓 6 腿",
+            q: "6 的第 4 個倍數是多少？",
+            mode: "single",
+            choices: ["18", "24", "30", "12"],
+            answer: "24",
+            hint: "第 4 個＝6 × 4＝24。",
+            tipWrong: "遷移到基數 6：第 n 個＝6×n。"
+          }
+        ],
+        challenge: [
+          {
+            id: "L1C1", type: "nth", typeLabel: "第幾個",
+            story: "🐸 青蛙 4 腿",
+            q: "4 的第 12 個倍數是多少？",
+            mode: "single",
+            choices: ["44", "48", "52", "40"],
+            answer: "48",
+            hint: "4 × 12＝48。",
+            tipWrong: "直接用「基數 × 序位」，小心唔好計成 4×11 或 4×13。"
+          },
+          {
+            id: "L1C2", type: "diff", typeLabel: "隔幾步差",
+            story: "🐸 青蛙 4 腿",
+            q: "4 的第 3 個倍數同第 6 個倍數相差多少？（中間隔幾步？）",
+            mode: "single",
+            choices: ["3", "4", "12", "24"],
+            answer: "12",
+            hint: "第 3 個＝12，第 6 個＝24，差 12。隔 3 步 → 差＝基數×3＝4×3＝12。",
+            tipWrong: "隔幾步差＝基數 × 步數。由第 3 到第 6 隔 3 步，4×3＝12。"
+          },
+          {
+            id: "L1C3", type: "diff", typeLabel: "隔幾步差",
+            q: "4 的第 2 個倍數同第 7 個倍數相差多少？",
+            mode: "single",
+            choices: ["5", "16", "20", "28"],
+            answer: "20",
+            hint: "隔 5 步 → 4×5＝20。或者 28−8＝20。",
+            tipWrong: "步數＝7−2＝5；差＝4×5＝20。"
+          },
+          {
+            id: "L1C4", type: "infinite", typeLabel: "有沒有最大",
+            q: "有人說「4 的最大倍數是 48」。對嗎？",
+            mode: "single",
+            choices: ["對，因為第 12 個係 48", "不對，倍數可以一直延長，沒有最大", "對，教科書只教到 48", "不對，最大應該係 44"],
+            answer: "不對，倍數可以一直延長，沒有最大",
+            hint: "48 只係第 12 個，後面仲有第 13 個＝52……",
+            tipWrong: "任何「最大倍數」說法都錯——倍數無限。"
+          },
+          {
+            id: "L1C5", type: "nth", typeLabel: "短遷移・6",
+            story: "🦟 蜻蜓 6 腿",
+            q: "6 的第 7 個倍數是多少？",
+            mode: "single",
+            choices: ["36", "42", "48", "30"],
+            answer: "42",
+            hint: "6 × 7＝42。",
+            tipWrong: "第 7 個＝6×7。唔好同青蛙嘅 4 撈亂。"
+          },
+          {
+            id: "L1C6", type: "diff", typeLabel: "短遷移・差",
+            story: "🦟 蜻蜓 6 腿",
+            q: "6 的第 4 個倍數同第 7 個倍數相差多少？",
+            mode: "single",
+            choices: ["3", "6", "18", "24"],
+            answer: "18",
+            hint: "隔 3 步 → 6×3＝18。第 4 個 24，第 7 個 42，差 18。",
+            tipWrong: "步數＝7−4＝3；差＝基數×步數＝6×3＝18。"
+          }
+        ]
+      }
+    },
+
+    2: {
+      name: "同一倍數・不同問法",
+      emoji: "🔀",
+      goal: "同一基數，分清：第 n 個／最初 n 個／以內有哪些／有多少個。",
+      banks: {
+        support: [
+          {
+            id: "L2S1", type: "withinList", typeLabel: "以內有哪些",
+            q: "50 以內，8 的倍數有哪些？（點選全部正確答案，再按確認）",
+            mode: "multi",
+            pool: [8, 16, 24, 32, 36, 40, 48, 56],
+            answer: [8, 16, 24, 32, 40, 48],
+            hint: "「以內」含 50。8×1…8×6＝48（≤50）；8×7＝56>50 唔計。36 唔係 8 的倍數。",
+            tipWrong: "先讀「50 以內」同「8 的倍數」。逐個用 ÷8 或列乘數表檢查。"
+          },
+          {
+            id: "L2S2", type: "withinList", typeLabel: "以內有哪些",
+            q: "50 以內，15 的倍數有哪些？請選出正確嗰一組。",
+            mode: "single",
+            choices: ["15, 30, 45", "15, 30, 45, 60", "10, 15, 30, 45", "15, 30, 40, 45"],
+            answer: "15, 30, 45",
+            hint: "15×1=15，15×2=30，15×3=45，15×4=60>50。以內含上限，但 50 本身唔係 15 的倍數。",
+            tipWrong: "列到超過 50 就停。60 唔喺 50 以內。"
+          },
+          {
+            id: "L2S3", type: "nth", typeLabel: "同基數對照・第n個",
+            story: "🔢 同一基數 4 —— 唔同問法",
+            q: "4 的第 6 個倍數是多少？",
+            mode: "single",
+            choices: ["20", "24", "28", "6"],
+            answer: "24",
+            hint: "第 6 個＝4 × 6＝24。",
+            tipWrong: "「第 6 個」只要一個數：4×6。"
+          },
+          {
+            id: "L2S4", type: "firstN", typeLabel: "同基數對照・最初n個",
+            story: "🔢 同一基數 4 —— 唔同問法",
+            q: "列出 4 的最初 6 個倍數。請選出正確嗰一組。",
+            mode: "single",
+            choices: ["4, 8, 12, 16, 20, 24", "0, 4, 8, 12, 16, 20", "4, 8, 12, 16, 20, 28", "8, 12, 16, 20, 24, 28"],
+            answer: "4, 8, 12, 16, 20, 24",
+            hint: "最初 6 個＝4×1 至 4×6。由 1 倍開始，唔計 0。",
+            tipWrong: "「最初 6 個」係一組數；「第 6 個」只係最後嗰個 24。兩者唔同！"
+          },
+          {
+            id: "L2S5", type: "withinList", typeLabel: "同基數對照・以內有哪些",
+            story: "🔢 同一基數 4 —— 唔同問法",
+            q: "24 以內，4 的倍數有哪些？請選出正確嗰一組。",
+            mode: "single",
+            choices: ["4, 8, 12, 16, 20, 24", "4, 8, 12, 16, 20", "8, 12, 16, 20, 24", "4, 8, 12, 16, 24"],
+            answer: "4, 8, 12, 16, 20, 24",
+            hint: "「以內」含 24。4×1…4×6＝24。呢題答案組合同「最初 6 個」一樣——因為 24 剛好係第 6 個。",
+            tipWrong: "含上限 24。讀清楚係「有哪些」（列出）唔係「有多少個」。"
+          },
+          {
+            id: "L2S6", type: "howMany", typeLabel: "同基數對照・有多少個",
+            story: "🔢 同一基數 4 —— 唔同問法",
+            q: "24 以內有多少個 4 的倍數？",
+            mode: "single",
+            choices: ["5", "6", "7", "24"],
+            answer: "6",
+            hint: "24÷4＝6，剛好整除，所以有 6 個。問「有多少個」答案係個數，唔係列出倍數。",
+            tipWrong: "「有多少個」→ 數個數（或上限÷基數取商）。唔好答成 24。"
+          }
+        ],
+        basic: [
+          {
+            id: "L2B1", type: "withinList", typeLabel: "以內有哪些",
+            q: "100 以內，12 的倍數有哪些？請選出正確嗰一組。",
+            mode: "single",
+            choices: [
+              "12, 24, 36, 48, 60, 72, 84, 96",
+              "12, 24, 36, 48, 60, 72, 84, 96, 108",
+              "12, 24, 36, 48, 60, 72, 84",
+              "10, 12, 24, 36, 48, 60, 72, 84, 96"
+            ],
+            answer: "12, 24, 36, 48, 60, 72, 84, 96",
+            hint: "12×1…12×8＝96≤100；12×9＝108>100。以內含 100，但 100 唔係 12 的倍數。",
+            tipWrong: "列到 ≤100 為止。108 超出。"
+          },
+          {
+            id: "L2B2", type: "nth", typeLabel: "第幾個",
+            q: "7 的第 8 個倍數是多少？",
+            mode: "single",
+            choices: ["49", "56", "63", "48"],
+            answer: "56",
+            hint: "第 8 個＝7 × 8＝56。",
+            tipWrong: "「第 8 個」＝7×8，唔係 7×7（第 7 個）。"
+          },
+          {
+            id: "L2B3", type: "withinList", typeLabel: "範圍以內・有哪些",
+            q: "30 至 70 之間，13 的倍數有哪些？（端點 30、70 都要檢查）請選出正確嗰一組。",
+            mode: "single",
+            choices: ["39, 52, 65", "26, 39, 52, 65", "39, 52, 65, 78", "30, 39, 52, 65, 70"],
+            answer: "39, 52, 65",
+            hint: "13×3=39，13×4=52，13×5=65；13×2=26<30，13×6=78>70。30 同 70 都唔係 13 的倍數。",
+            tipWrong: "「之間」要睇上下限。端點唔係倍數就唔選。讀題，唔好假設端點一定計。"
+          },
+          {
+            id: "L2B4", type: "nth", typeLabel: "同基數對照・第n個",
+            story: "🔢 同一基數 6 —— 唔同問法",
+            q: "6 的第 6 個倍數是多少？",
+            mode: "single",
+            choices: ["30", "36", "42", "6"],
+            answer: "36",
+            hint: "第 6 個＝6 × 6＝36。",
+            tipWrong: "只要一個數。唔好同「最初 6 個」搞亂。"
+          },
+          {
+            id: "L2B5", type: "firstN", typeLabel: "同基數對照・最初n個",
+            story: "🔢 同一基數 6 —— 唔同問法",
+            q: "列出 6 的最初 6 個倍數。請選出正確嗰一組。",
+            mode: "single",
+            choices: ["6, 12, 18, 24, 30, 36", "0, 6, 12, 18, 24, 30", "6, 12, 18, 24, 30, 42", "12, 18, 24, 30, 36, 42"],
+            answer: "6, 12, 18, 24, 30, 36",
+            hint: "6×1 至 6×6。由 1 倍開始。",
+            tipWrong: "「最初 6 個」係一列；「第 6 個」只係 36。"
+          },
+          {
+            id: "L2B6", type: "howMany", typeLabel: "同基數對照・有多少個",
+            story: "🔢 同一基數 6 —— 唔同問法",
+            q: "24 以內有多少個 6 的倍數？",
+            mode: "single",
+            choices: ["3", "4", "5", "24"],
+            answer: "4",
+            hint: "6, 12, 18, 24 → 4 個。24÷6＝4。",
+            tipWrong: "問個數。24 以內含 24。"
+          },
+          {
+            id: "L2B7", type: "howMany", typeLabel: "上限非倍數",
+            story: "🔢 同一基數 6 —— 注意上限",
+            q: "22 以內有多少個 6 的倍數？",
+            mode: "single",
+            choices: ["3", "4", "2", "22"],
+            answer: "3",
+            hint: "6, 12, 18（24>22）。22÷6＝3 餘 4 → 取商 3。上限 22 本身唔係倍數。",
+            tipWrong: "上限唔係倍數時，唔可以當「有 22÷6 向上」。要向下取整。"
+          }
+        ],
+        challenge: [
+          {
+            id: "L2C1", type: "next", typeLabel: "下一個倍數",
+            q: "96 是 16 的倍數，下一個 16 的倍數是多少？",
+            mode: "single",
+            choices: ["104", "112", "128", "100"],
+            answer: "112",
+            hint: "下一個＝而家呢個＋基數。96＋16＝112。或者 16×7＝112（96＝16×6）。",
+            tipWrong: "「下一個」＝加一個基數，唔係加 1。"
+          },
+          {
+            id: "L2C2", type: "howMany", typeLabel: "有多少個",
+            q: "100 以內，21 的倍數有多少個？",
+            mode: "single",
+            choices: ["3", "4", "5", "21"],
+            answer: "4",
+            hint: "21, 42, 63, 84（105>100）。100÷21＝4 餘 16 → 4 個。",
+            tipWrong: "用「上限÷基數」取商。答案係個數 4，唔係某個倍數。"
+          },
+          {
+            id: "L2C3", type: "nth", typeLabel: "同基數對照・第n個",
+            story: "🔢 同一基數 4 —— 易混淆問法",
+            q: "4 的第 6 個倍數是多少？",
+            mode: "single",
+            choices: ["20", "24", "4, 8, 12, 16, 20, 24", "6"],
+            answer: "24",
+            hint: "只要一個數：4×6＝24。選項入面嗰組係「最初 6 個」，唔係呢題要嘅。",
+            tipWrong: "睇清「第 6 個」vs「最初 6 個」——一個數 vs 一組數。"
+          },
+          {
+            id: "L2C4", type: "firstN", typeLabel: "同基數對照・最初n個",
+            story: "🔢 同一基數 4 —— 易混淆問法",
+            q: "列出 4 的最初 6 個倍數。請選出正確嗰一組。",
+            mode: "single",
+            choices: ["24", "4, 8, 12, 16, 20, 24", "0, 4, 8, 12, 16, 20", "8, 12, 16, 20, 24, 28"],
+            answer: "4, 8, 12, 16, 20, 24",
+            hint: "要一組數，由 4×1 起。單答 24 係「第 6 個」先啱。",
+            tipWrong: "「最初 6 個」唔可以只答最後一個。"
+          },
+          {
+            id: "L2C5", type: "howMany", typeLabel: "同基數對照・有多少個",
+            story: "🔢 同一基數 4",
+            q: "24 以內有多少個 4 的倍數？",
+            mode: "single",
+            choices: ["4, 8, 12, 16, 20, 24", "6", "5", "24"],
+            answer: "6",
+            hint: "問「有多少個」→ 答 6。列出嗰組係「有哪些」。",
+            tipWrong: "同一範圍，問法唔同答案形式就唔同：個數 vs 列表。"
+          },
+          {
+            id: "L2C6", type: "howMany", typeLabel: "上限非倍數",
+            q: "22 以內有多少個 4 的倍數？",
+            mode: "single",
+            choices: ["5", "6", "4", "22"],
+            answer: "5",
+            hint: "4, 8, 12, 16, 20（24>22）。22÷4＝5 餘 2 → 5 個。",
+            tipWrong: "上限 22 唔係 4 的倍數；唔好當成 24 以內嗰 6 個。"
+          }
+        ]
+      }
+    },
+
+    3: {
+      name: "最接近與相鄰差",
+      emoji: "🎯",
+      goal: "「最接近」＝上下兩個候選比距離；相鄰差＝基數；挑戰可反求基數。",
+      banks: {
+        support: [
+          {
+            id: "L3S1", type: "closest", typeLabel: "最接近",
+            q: "哪一個 5 的倍數最接近 22？",
+            mode: "single",
+            choices: ["15", "20", "25", "22"],
+            answer: "20",
+            hint: "上下候選：20（差 2）同 25（差 3）。20 較近。",
+            tipWrong: "搵最接近：先找上下兩個倍數，比較同目標嘅距離，揀較近嗰個。"
+          },
+          {
+            id: "L3S2", type: "closest", typeLabel: "最接近",
+            q: "哪一個 4 的倍數最接近 19？",
+            mode: "single",
+            choices: ["12", "16", "20", "19"],
+            answer: "20",
+            hint: "16 差 3；20 差 1。20 較近。",
+            tipWrong: "上下候選比距離：|19−16|=3，|19−20|=1 → 20。"
+          },
+          {
+            id: "L3S3", type: "diff", typeLabel: "相鄰差",
+            q: "5 的第 3 個倍數同第 4 個倍數相差多少？",
+            mode: "single",
+            choices: ["1", "3", "5", "15"],
+            answer: "5",
+            hint: "相鄰差＝基數＝5。（20−15＝5）",
+            tipWrong: "相鄰兩個倍數相差永遠＝基數本身。"
+          },
+          {
+            id: "L3S4", type: "closest", typeLabel: "最接近",
+            q: "哪一個 3 的倍數最接近 20？",
+            mode: "single",
+            choices: ["18", "21", "15", "20"],
+            answer: "21",
+            hint: "18 差 2；21 差 1。21 較近。",
+            tipWrong: "比較距離：|20−18|=2，|20−21|=1 → 21。"
+          },
+          {
+            id: "L3S5", type: "diff", typeLabel: "相鄰差",
+            story: "🐸 複習：相鄰差",
+            q: "4 的任意兩個相鄰倍數相差多少？",
+            mode: "single",
+            choices: ["1", "2", "4", "8"],
+            answer: "4",
+            hint: "相鄰差＝基數＝4。",
+            tipWrong: "記住：相鄰差＝基數，同「最接近」係兩種唔同技能。"
+          },
+          {
+            id: "L3S6", type: "closest", typeLabel: "最接近",
+            q: "哪一個 6 的倍數最接近 25？",
+            mode: "single",
+            choices: ["18", "24", "30", "25"],
+            answer: "24",
+            hint: "24 差 1；30 差 5。24 近得多。",
+            tipWrong: "上下候選比距離，唔好見到「接近」就揀大過目標嘅。"
+          }
+        ],
+        basic: [
+          {
+            id: "L3B1", type: "closest", typeLabel: "最接近",
+            q: "哪一個 17 的倍數最接近 50？",
+            mode: "single",
+            choices: ["34", "51", "68", "50"],
+            answer: "51",
+            hint: "17×2=34（差 16）；17×3=51（差 1）。51 遠較接近。",
+            tipWrong: "上下候選比距離：34 同 51，邊個離 50 近？"
+          },
+          {
+            id: "L3B2", type: "diff", typeLabel: "相鄰差",
+            q: "17 的第 5 個倍數同第 6 個倍數相差多少？",
+            mode: "single",
+            choices: ["1", "5", "6", "17"],
+            answer: "17",
+            hint: "第 5 個＝85，第 6 個＝102，差 17＝基數。",
+            tipWrong: "相鄰差＝基數，唔使計到兩個倍數先都得——但計出嚟核對更好。"
+          },
+          {
+            id: "L3B3", type: "closest", typeLabel: "最接近",
+            q: "哪一個 9 的倍數最接近 40？",
+            mode: "single",
+            choices: ["27", "36", "45", "40"],
+            answer: "36",
+            hint: "36 差 4；45 差 5。36 較近。",
+            tipWrong: "比較 |40−36| 同 |40−45|。"
+          },
+          {
+            id: "L3B4", type: "closest", typeLabel: "最接近",
+            q: "哪一個 8 的倍數最接近 59？",
+            mode: "single",
+            choices: ["48", "56", "64", "59"],
+            answer: "56",
+            hint: "56 差 3；64 差 5。56 較近。",
+            tipWrong: "比較 |59−56| 同 |59−64|。"
+          },
+          {
+            id: "L3B5", type: "diff", typeLabel: "相鄰差",
+            q: "9 的第 4 個倍數同第 5 個倍數相差多少？",
+            mode: "single",
+            choices: ["1", "4", "5", "9"],
+            answer: "9",
+            hint: "相鄰差＝9。",
+            tipWrong: "差＝基數，唔係序位差 1。"
+          },
+          {
+            id: "L3B6", type: "closest", typeLabel: "最接近",
+            q: "哪一個 13 的倍數最接近 80？",
+            mode: "single",
+            choices: ["65", "78", "91", "80"],
+            answer: "78",
+            hint: "13×6=78（差 2）；13×7=91（差 11）。78 較近。",
+            tipWrong: "上下候選 78 同 91，比距離。"
+          }
+        ],
+        challenge: [
+          {
+            id: "L3C1", type: "closest", typeLabel: "最接近",
+            q: "哪一個 17 的倍數最接近 50？",
+            mode: "single",
+            choices: ["34", "51", "17", "50"],
+            answer: "51",
+            hint: "34 差 16；51 差 1 → 51。",
+            tipWrong: "最接近唔等於「不大於」——可以大過目標（好似 51>50）。"
+          },
+          {
+            id: "L3C2", type: "reverse", typeLabel: "反求基數",
+            q: "某數的第 4 個倍數是 76。這個數（基數）是多少？",
+            mode: "single",
+            choices: ["16", "19", "18", "76"],
+            answer: "19",
+            hint: "第 4 個＝基數×4＝76 → 基數＝76÷4＝19。",
+            tipWrong: "反過來：已知倍數同序位，求基數＝倍數÷序位。"
+          },
+          {
+            id: "L3C3", type: "diff", typeLabel: "相鄰差",
+            q: "19 的第 5 個倍數同第 6 個倍數相差多少？",
+            mode: "single",
+            choices: ["1", "5", "19", "95"],
+            answer: "19",
+            hint: "相鄰差＝基數＝19。",
+            tipWrong: "同第 2 節唔同：呢度練「差＝基數」同「最接近」一齊用。"
+          },
+          {
+            id: "L3C4", type: "closest", typeLabel: "最接近",
+            q: "哪一個 14 的倍數最接近 100？",
+            mode: "single",
+            choices: ["84", "98", "112", "100"],
+            answer: "98",
+            hint: "14×7=98（差 2）；14×8=112（差 12）。",
+            tipWrong: "比距離，唔好見 100 就以為答案係 100（100 唔係 14 的倍數）。"
+          },
+          {
+            id: "L3C5", type: "floorMax", typeLabel: "不大於・區分題",
+            q: "【注意問法】不大於 50 的、最大的 17 的倍數是多少？（呢題唔係問「最接近」）",
+            mode: "single",
+            choices: ["34", "51", "17", "50"],
+            answer: "34",
+            hint: "「不大於 50」＝≤50。51>50 唔得，所以係 34。同「最接近 50→51」唔同！",
+            tipWrong: "題幹寫「不大於」→ 唔可以選 51。呢題同「最接近」答案唔同，讀清條件！"
+          },
+          {
+            id: "L3C6", type: "reverse", typeLabel: "反求基數",
+            q: "某數的第 5 個倍數是 85。這個數是多少？",
+            mode: "single",
+            choices: ["15", "16", "17", "85"],
+            answer: "17",
+            hint: "基數＝85÷5＝17。",
+            tipWrong: "倍數÷序位＝基數。"
+          }
+        ]
+      }
+    }
+  };
+
+
+  const LEVEL_META = {
+    support: { name: "支援", badge: "badge-support", emoji: "🌱" },
+    basic: { name: "基本", badge: "badge-basic", emoji: "📘" },
+    challenge: { name: "挑戰", badge: "badge-challenge", emoji: "🔥" }
+  };
+
+  const QUESTIONS_PER_ROUND = 6;
+
+  let lesson = 1;
+  let level = "support";
+  let queue = [];
+  let qIndex = 0;
+  let score = 0;
+  let answered = false;
+  let multiSelected = new Set();
+  let resultsLog = [];
+
+  const $ = (id) => document.getElementById(id);
+  const screens = { start: $("screen-start"), play: $("screen-play"), result: $("screen-result") };
+
+  function showScreen(name) {
+    Object.keys(screens).forEach((k) => screens[k].classList.remove("active"));
+    screens[name].classList.add("active");
+    window.scrollTo(0, 0);
+  }
+
+  function bindPicks(groupId, attr, onChange) {
+    document.querySelectorAll("#" + groupId + " .pick-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#" + groupId + " .pick-btn").forEach((b) => {
+          b.classList.remove("selected");
+          b.setAttribute("aria-pressed", "false");
+        });
+        btn.classList.add("selected");
+        btn.setAttribute("aria-pressed", "true");
+        onChange(btn.getAttribute(attr));
+      });
+    });
+  }
+
+  bindPicks("lesson-group", "data-lesson", (v) => { lesson = parseInt(v, 10); });
+  bindPicks("level-group", "data-level", (v) => { level = v; });
+
+  $("btn-start").addEventListener("click", startGame);
+  $("btn-again").addEventListener("click", startGame);
+  $("btn-home").addEventListener("click", () => showScreen("start"));
+  $("btn-hint").addEventListener("click", showHint);
+  $("btn-check").addEventListener("click", checkAnswer);
+  $("btn-retry").addEventListener("click", retryQuestion);
+  $("btn-next").addEventListener("click", nextQuestion);
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function startGame() {
+    const bank = LESSONS[lesson].banks[level];
+    const n = Math.min(QUESTIONS_PER_ROUND, bank.length);
+    // Keep pedagogical order for lesson banks (curriculum sequence), but allow mild shuffle within
+    // For MVP: use bank order so dual-column intro comes first; if more than n, take first n after light shuffle of tail
+    if (bank.length <= n) {
+      queue = bank.slice();
+    } else {
+      // Keep first 2 in relative order (warm-up), shuffle rest, take enough
+      const head = bank.slice(0, 2);
+      const tail = shuffle(bank.slice(2));
+      queue = head.concat(tail).slice(0, n);
+    }
+    qIndex = 0;
+    score = 0;
+    resultsLog = [];
+    showScreen("play");
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    answered = false;
+    multiSelected = new Set();
+    const q = queue[qIndex];
+    const L = LESSONS[lesson];
+    const lm = LEVEL_META[level];
+
+    $("progress-fill").style.width = (qIndex / queue.length * 100) + "%";
+    $("progress-text").textContent = (qIndex + 1) + " / " + queue.length;
+
+    $("lesson-badge").textContent = L.emoji + " 第" + lesson + "節";
+    const badge = $("level-badge");
+    badge.textContent = lm.emoji + " " + lm.name;
+    badge.className = "badge " + lm.badge;
+
+    $("type-tag").textContent = q.typeLabel;
+    $("question-text").textContent = q.q;
+
+    const story = $("story-banner");
+    if (q.story) {
+      story.textContent = q.story;
+      story.classList.remove("hidden");
+    } else {
+      story.classList.add("hidden");
+    }
+
+    const vis = $("visual-box");
+    if (q.visual) {
+      vis.innerHTML = q.visual;
+      vis.classList.remove("hidden");
+    } else {
+      vis.innerHTML = "";
+      vis.classList.add("hidden");
+    }
+
+    $("hint-box").classList.remove("show");
+    $("hint-box").textContent = "";
+    $("feedback").classList.remove("show", "ok", "bad");
+    $("feedback").textContent = "";
+    $("next-row").style.display = "none";
+
+    const hintBtn = $("btn-hint");
+    const checkBtn = $("btn-check");
+    if (level === "support") {
+      hintBtn.style.display = "";
+      hintBtn.disabled = false;
+    } else {
+      hintBtn.style.display = "none";
+    }
+
+    const area = $("options-area");
+    area.innerHTML = "";
+    area.className = q.mode === "multi" ? "chip-grid" : "options";
+
+    if (q.mode === "single") {
+      checkBtn.style.display = "none";
+      shuffle(q.choices).forEach((c) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "option-btn";
+        btn.textContent = c;
+        btn.addEventListener("click", () => selectSingle(btn, c));
+        area.appendChild(btn);
+      });
+    } else {
+      checkBtn.style.display = "";
+      checkBtn.disabled = true;
+      shuffle(q.pool.map(String)).forEach((n) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip";
+        chip.textContent = n;
+        chip.dataset.val = n;
+        chip.addEventListener("click", () => toggleChip(chip, n));
+        area.appendChild(chip);
+      });
+    }
+  }
+
+  function selectSingle(btn, value) {
+    if (answered) return;
+    answered = true;
+    const q = queue[qIndex];
+    const correct = value === q.answer;
+    document.querySelectorAll(".option-btn").forEach((b) => {
+      b.disabled = true;
+      if (b.textContent === q.answer) b.classList.add("correct");
+    });
+    if (!correct) btn.classList.add("wrong");
+    else btn.classList.add("correct");
+    finishAttempt(correct, q);
+  }
+
+  function toggleChip(chip, n) {
+    if (answered) return;
+    if (multiSelected.has(n)) {
+      multiSelected.delete(n);
+      chip.classList.remove("selected");
+    } else {
+      multiSelected.add(n);
+      chip.classList.add("selected");
+    }
+    $("btn-check").disabled = multiSelected.size === 0;
+  }
+
+  function checkAnswer() {
+    if (answered) return;
+    answered = true;
+    const q = queue[qIndex];
+    const correctSet = new Set(q.answer.map(String));
+    let allOk = multiSelected.size === correctSet.size;
+    if (allOk) correctSet.forEach((v) => { if (!multiSelected.has(v)) allOk = false; });
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.disabled = true;
+      const v = chip.dataset.val;
+      if (correctSet.has(v) && multiSelected.has(v)) chip.classList.add("correct");
+      else if (multiSelected.has(v) && !correctSet.has(v)) chip.classList.add("wrong");
+      else if (correctSet.has(v) && !multiSelected.has(v)) chip.classList.add("missed");
+    });
+    $("btn-check").disabled = true;
+    finishAttempt(allOk, q);
+  }
+
+  function finishAttempt(correct, q) {
+    $("btn-hint").disabled = true;
+    const fb = $("feedback");
+    fb.classList.add("show");
+    if (correct) {
+      score++;
+      fb.classList.add("ok");
+      fb.textContent = "🎉 答對啦！你讀懂咗題目嘅條件。";
+      resultsLog.push({ q: q.q, ok: true, type: q.typeLabel });
+      $("btn-retry").style.display = "none";
+    } else {
+      fb.classList.add("bad");
+      fb.innerHTML = "😅 未啱呢！<br><small>" + (q.tipWrong || "再睇清楚題目問咩。") + "</small>";
+      $("hint-box").textContent = "💡 " + q.hint;
+      $("hint-box").classList.add("show");
+      resultsLog.push({ q: q.q, ok: false, type: q.typeLabel });
+      $("btn-retry").style.display = "";
+    }
+    $("btn-next").textContent = qIndex + 1 >= queue.length ? "看成績 🏆" : "下一題 ➡️";
+    $("next-row").style.display = "flex";
+    $("progress-fill").style.width = ((qIndex + 1) / queue.length * 100) + "%";
+  }
+
+  function showHint() {
+    const q = queue[qIndex];
+    $("hint-box").textContent = "💡 " + q.hint;
+    $("hint-box").classList.add("show");
+  }
+
+  function retryQuestion() {
+    if (resultsLog.length && resultsLog[resultsLog.length - 1].q === queue[qIndex].q) {
+      resultsLog.pop();
+    }
+    renderQuestion();
+  }
+
+  function nextQuestion() {
+    qIndex++;
+    if (qIndex >= queue.length) showResult();
+    else renderQuestion();
+  }
+
+  function showResult() {
+    showScreen("result");
+    $("score-big").textContent = score + " / " + queue.length;
+    const pct = score / queue.length;
+    let stars = "⭐⭐⭐", label = "超棒！條件讀得好清楚！";
+    if (pct < 0.34) { stars = "⭐"; label = "繼續加油！先讀題再答。"; }
+    else if (pct < 0.67) { stars = "⭐⭐"; label = "唔錯！再分清唔同問法會更穩。"; }
+    else if (pct < 1) { stars = "⭐⭐⭐"; label = "好叻！差一點就滿分！"; }
+    $("stars").textContent = stars;
+    $("score-label").textContent = label;
+
+    const ul = $("summary-list");
+    ul.innerHTML = "";
+    const li0 = document.createElement("li");
+    li0.textContent = "本局：第" + lesson + "節「" + LESSONS[lesson].name + "」· " + LEVEL_META[level].name;
+    ul.appendChild(li0);
+    const types = {};
+    resultsLog.forEach((r) => {
+      if (!types[r.type]) types[r.type] = { ok: 0, total: 0 };
+      types[r.type].total++;
+      if (r.ok) types[r.type].ok++;
+    });
+    Object.keys(types).forEach((t) => {
+      const li = document.createElement("li");
+      li.textContent = t + "：" + types[t].ok + "/" + types[t].total;
+      ul.appendChild(li);
+    });
+    const tip = document.createElement("li");
+    tip.textContent = LESSONS[lesson].goal;
+    ul.appendChild(tip);
+  }
+})();
+</script>
+</body>
+</html>
