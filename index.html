@@ -134,6 +134,7 @@
       font-size: 0.95rem; font-weight: 700;
     }
     .visual-box th { background: #4ecdc4; color: #fff; }
+    .visual-box th.row-head { white-space: nowrap; min-width: 5.5em; word-break: keep-all; background: #2bb3a8; }
     .visual-box td { background: #fff; }
     .visual-box .hl { background: #ffe66d; }
     .visual-caption { font-size: 0.82rem; color: var(--muted); margin-top: 6px; text-align: center; }
@@ -196,7 +197,7 @@
   </style>
 </head>
 <body>
-  <p class="teacher-note">教師備註：學習目標 — 讀懂倍數文字條件；由 1 倍起計；「以內」含上限；不代學生篩條件</p>
+  <p class="teacher-note">教師備註：學習目標 — 讀懂倍數文字條件；由 1 倍起計；「以內」含上限；不代學生篩條件；每局基數會輪換</p>
 
   <!-- START -->
   <div id="screen-start" class="screen active">
@@ -212,8 +213,8 @@
       <span class="label">📖 揀關卡（節）：</span>
       <div class="pick-group" id="lesson-group" role="radiogroup" aria-label="關卡">
         <button type="button" class="pick-btn selected" data-lesson="1" aria-pressed="true">
-          <span class="emoji">🐸</span>
-          <span>第1節　倍數序位探險<div class="desc">青蛙4腿 · 第幾個 · 相鄰差 · 有冇最大倍數</div></span>
+          <span class="emoji">🔢</span>
+          <span>第1節　第幾個倍數探險<div class="desc">第幾個 · 倍數表 · 相鄰差 · 有冇最大倍數（每局換基數）</div></span>
         </button>
         <button type="button" class="pick-btn" data-lesson="2" aria-pressed="false">
           <span class="emoji">🔀</span>
@@ -244,7 +245,7 @@
 
       <button type="button" class="btn" id="btn-start">🚀 開始遊戲</button>
     </div>
-    <p class="footer-tip">每局約 6 題 · 適合 35 分鐘一節課短片段 · 唔收集個人資料</p>
+    <p class="footer-tip">每局約 6 題 · 適合 35 分鐘一節課短片段 · 唔收集個人資料 · 再玩會換基數</p>
   </div>
 
   <!-- PLAY -->
@@ -256,6 +257,7 @@
     <div class="card">
       <span class="badge badge-lesson" id="lesson-badge">第1節</span>
       <span class="badge" id="level-badge">支援</span>
+      <span class="badge badge-lesson" id="base-badge">基數 4</span>
       <div><span class="type-tag" id="type-tag">第幾個</span></div>
       <div class="story-banner hidden" id="story-banner"></div>
       <p class="question-text" id="question-text"></p>
@@ -287,613 +289,137 @@
         <button type="button" class="btn btn-outline" id="btn-home">🏠 換關卡／難度</button>
       </div>
     </div>
-    <p class="footer-tip">溫馨提示：倍數由 1 倍開始；相鄰兩個倍數相差＝基數本身</p>
+    <p class="footer-tip">溫馨提示：倍數由 1 倍開始；相鄰兩個倍數相差＝基數本身；再玩會換另一個基數</p>
   </div>
 
 <script>
 (function () {
   "use strict";
 
-  /* ========== 雙欄視覺：序位｜數值 ========== */
+  /* ========== 工具 ========== */
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function pickOne(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function uniqNums(arr) {
+    const seen = {};
+    const out = [];
+    arr.forEach(function (n) {
+      const k = String(n);
+      if (!seen[k]) { seen[k] = true; out.push(n); }
+    });
+    return out;
+  }
+
+  function choiceSet(correct, distractors, asString) {
+    const pool = uniqNums([correct].concat(distractors));
+    const picked = shuffle(pool).slice(0, 4);
+    if (picked.indexOf(correct) < 0) {
+      picked[0] = correct;
+    }
+    const final = shuffle(picked);
+    return asString === false ? final : final.map(String);
+  }
+
+  function listStr(arr) {
+    return arr.join(", ");
+  }
+
+  /* ========== 倍數表雙欄：「第幾個｜N的倍數」========== */
   function dualTable(base, upto, highlightNth) {
-    let heads = "", ords = "", vals = "";
+    let heads = "", vals = "";
     for (let i = 1; i <= upto; i++) {
       const hl = highlightNth && highlightNth.indexOf(i) >= 0 ? ' class="hl"' : "";
       heads += "<th" + hl + ">第" + i + "個</th>";
-      ords += "<td" + hl + ">" + i + "</td>";
       vals += "<td" + hl + ">" + (base * i) + "</td>";
     }
-    return '<table><tr><th>序位</th>' + heads + '</tr>' +
-           '<tr><th>倍數</th>' + vals + '</tr></table>' +
-           '<p class="visual-caption">🐸 每行相差 ' + base + '（基數本身）</p>';
+    return '<table><tr><th class="row-head">第幾個</th>' + heads + '</tr>' +
+           '<tr><th class="row-head">' + base + '的倍數</th>' + vals + '</tr></table>' +
+           '<p class="visual-caption">倍數表：相鄰兩個相差 ' + base + '（基數本身）</p>';
   }
 
-  /* ========== 題庫（按節 × 難度）==========
-     mode: single | multi
-     visual: optional HTML
-     story: optional banner
-  */
-  const LESSONS = {
-    1: {
-      name: "倍數序位探險",
-      emoji: "🐸",
-      goal: "用序位讀倍數：第 n 個＝基數×n；相鄰差＝基數；倍數無限延長。",
-      banks: {
-        support: [
-          {
-            id: "L1S1", type: "nth", typeLabel: "第幾個",
-            story: "🐸 一隻青蛙有 4 條腿。排成一列青蛙，總腿數就係 4 的倍數。",
-            q: "第 1 個倍數（最小倍數）是多少？",
-            mode: "single",
-            choices: ["0", "1", "4", "8"],
-            answer: "4",
-            visual: dualTable(4, 5, [1]),
-            hint: "第 1 個倍數＝4 × 1＝4（該數本身）。由 1 倍開始，唔由 0 開始。",
-            tipWrong: "「第 1 個／最小倍數」＝基數本身。睇雙欄：序位 1 → 倍數 4。"
-          },
-          {
-            id: "L1S2", type: "nth", typeLabel: "第幾個",
-            story: "🐸 青蛙 4 腿",
-            q: "4 的第 3 個倍數是多少？",
-            mode: "single",
-            choices: ["8", "12", "16", "3"],
-            answer: "12",
-            visual: dualTable(4, 5, [3]),
-            hint: "第 3 個＝4 × 3。雙欄：序位 3 → 倍數 12。",
-            tipWrong: "「第幾個」→ 基數 × 序位。第 3 個＝4×3。"
-          },
-          {
-            id: "L1S3", type: "nth", typeLabel: "第幾個",
-            story: "🐸 青蛙 4 腿",
-            q: "4 的第 5 個倍數是多少？",
-            mode: "single",
-            choices: ["16", "20", "24", "5"],
-            answer: "20",
-            visual: dualTable(4, 6, [5]),
-            hint: "第 5 個＝4 × 5＝20。",
-            tipWrong: "對住雙欄：序位 5 下面嗰個數就係答案。"
-          },
-          {
-            id: "L1S4", type: "diff", typeLabel: "相鄰差",
-            story: "🐸 青蛙 4 腿",
-            q: "4 的第 2 個倍數同第 3 個倍數相差多少？",
-            mode: "single",
-            choices: ["1", "2", "4", "8"],
-            answer: "4",
-            visual: dualTable(4, 5, [2, 3]),
-            hint: "相鄰兩個倍數相差＝基數本身＝4。（12−8＝4）",
-            tipWrong: "相鄰差永遠等於基數。第 2 個係 8，第 3 個係 12，差 4。"
-          },
-          {
-            id: "L1S5", type: "infinite", typeLabel: "有沒有最大",
-            q: "4 的倍數有沒有「最大」的一個？",
-            mode: "single",
-            choices: ["有，最大係 40", "有，最大係 100", "沒有，可以一直延長", "只有 10 個倍數"],
-            answer: "沒有，可以一直延長",
-            hint: "倍數＝4×1、4×2、4×3… 可以一直乘落去，所以冇最大倍數。",
-            tipWrong: "倍數數列可以無限延長：第 11 個、第 12 個、第 100 個……都有。"
-          },
-          {
-            id: "L1S6", type: "nth", typeLabel: "短遷移・6",
-            story: "🦟 一隻蜻蜓有 6 條腿。",
-            q: "6 的第 2 個倍數是多少？",
-            mode: "single",
-            choices: ["6", "12", "18", "2"],
-            answer: "12",
-            hint: "同青蛙道理一樣：第 2 個＝6 × 2＝12。",
-            tipWrong: "換咗基數 6，方法一樣：第 n 個＝6 × n。"
-          }
-        ],
-        basic: [
-          {
-            id: "L1B1", type: "nth", typeLabel: "第幾個",
-            story: "🐸 青蛙 4 腿 · 序位｜數值",
-            q: "第 1 個倍數（最小倍數）是多少？",
-            mode: "single",
-            choices: ["0", "4", "8", "1"],
-            answer: "4",
-            visual: dualTable(4, 4, [1]),
-            hint: "第 1 個＝4×1＝4（該數本身）。",
-            tipWrong: "最小／第 1 個倍數＝基數本身，唔係 0。"
-          },
-          {
-            id: "L1B2", type: "nth", typeLabel: "第幾個",
-            story: "🐸 青蛙 4 腿",
-            q: "4 的第 11 個倍數是多少？",
-            mode: "single",
-            choices: ["40", "44", "48", "404"],
-            answer: "44",
-            hint: "第 11 個＝4 × 11＝44。可以延長雙欄：…第10個40，第11個44。",
-            tipWrong: "延長數列：唔使成條寫晒，用「基數 × 序位」直接計。"
-          },
-          {
-            id: "L1B3", type: "nth", typeLabel: "第幾個",
-            story: "🐸 青蛙 4 腿",
-            q: "4 的第 12 個倍數是多少？",
-            mode: "single",
-            choices: ["44", "48", "52", "36"],
-            answer: "48",
-            hint: "第 12 個＝4 × 12＝48。亦可以：第 11 個 44 再加 4。",
-            tipWrong: "第 12 個＝4×12，或者由第 11 個（44）再加一個基數 4。"
-          },
-          {
-            id: "L1B4", type: "infinite", typeLabel: "有沒有最大",
-            q: "倍數數列可以一直延長嗎？4 的倍數有沒有最大的一個？",
-            mode: "single",
-            choices: ["可以延長，但有最大倍數", "不可以延長，只有有限個", "可以一直延長，沒有最大倍數", "最大倍數係第 12 個"],
-            answer: "可以一直延長，沒有最大倍數",
-            hint: "序位可以係 13、14、100… 所以冇「最後一個」。",
-            tipWrong: "重點：倍數無限多，冇最大。"
-          },
-          {
-            id: "L1B5", type: "diff", typeLabel: "相鄰差",
-            story: "🐸 青蛙 4 腿",
-            q: "4 的相鄰兩個倍數相差多少？",
-            mode: "single",
-            choices: ["1", "2", "4", "8"],
-            answer: "4",
-            visual: dualTable(4, 5, [3, 4]),
-            hint: "相鄰差＝基數＝4。例如 12 同 16 差 4。",
-            tipWrong: "無論邊兩個相鄰倍數，相差永遠係基數本身。"
-          },
-          {
-            id: "L1B6", type: "nth", typeLabel: "短遷移・6",
-            story: "🦟 蜻蜓 6 腿",
-            q: "6 的第 4 個倍數是多少？",
-            mode: "single",
-            choices: ["18", "24", "30", "12"],
-            answer: "24",
-            hint: "第 4 個＝6 × 4＝24。",
-            tipWrong: "遷移到基數 6：第 n 個＝6×n。"
-          }
-        ],
-        challenge: [
-          {
-            id: "L1C1", type: "nth", typeLabel: "第幾個",
-            story: "🐸 青蛙 4 腿",
-            q: "4 的第 12 個倍數是多少？",
-            mode: "single",
-            choices: ["44", "48", "52", "40"],
-            answer: "48",
-            hint: "4 × 12＝48。",
-            tipWrong: "直接用「基數 × 序位」，小心唔好計成 4×11 或 4×13。"
-          },
-          {
-            id: "L1C2", type: "diff", typeLabel: "隔幾步差",
-            story: "🐸 青蛙 4 腿",
-            q: "4 的第 3 個倍數同第 6 個倍數相差多少？（中間隔幾步？）",
-            mode: "single",
-            choices: ["3", "4", "12", "24"],
-            answer: "12",
-            hint: "第 3 個＝12，第 6 個＝24，差 12。隔 3 步 → 差＝基數×3＝4×3＝12。",
-            tipWrong: "隔幾步差＝基數 × 步數。由第 3 到第 6 隔 3 步，4×3＝12。"
-          },
-          {
-            id: "L1C3", type: "diff", typeLabel: "隔幾步差",
-            q: "4 的第 2 個倍數同第 7 個倍數相差多少？",
-            mode: "single",
-            choices: ["5", "16", "20", "28"],
-            answer: "20",
-            hint: "隔 5 步 → 4×5＝20。或者 28−8＝20。",
-            tipWrong: "步數＝7−2＝5；差＝4×5＝20。"
-          },
-          {
-            id: "L1C4", type: "infinite", typeLabel: "有沒有最大",
-            q: "有人說「4 的最大倍數是 48」。對嗎？",
-            mode: "single",
-            choices: ["對，因為第 12 個係 48", "不對，倍數可以一直延長，沒有最大", "對，教科書只教到 48", "不對，最大應該係 44"],
-            answer: "不對，倍數可以一直延長，沒有最大",
-            hint: "48 只係第 12 個，後面仲有第 13 個＝52……",
-            tipWrong: "任何「最大倍數」說法都錯——倍數無限。"
-          },
-          {
-            id: "L1C5", type: "nth", typeLabel: "短遷移・6",
-            story: "🦟 蜻蜓 6 腿",
-            q: "6 的第 7 個倍數是多少？",
-            mode: "single",
-            choices: ["36", "42", "48", "30"],
-            answer: "42",
-            hint: "6 × 7＝42。",
-            tipWrong: "第 7 個＝6×7。唔好同青蛙嘅 4 撈亂。"
-          },
-          {
-            id: "L1C6", type: "diff", typeLabel: "短遷移・差",
-            story: "🦟 蜻蜓 6 腿",
-            q: "6 的第 4 個倍數同第 7 個倍數相差多少？",
-            mode: "single",
-            choices: ["3", "6", "18", "24"],
-            answer: "18",
-            hint: "隔 3 步 → 6×3＝18。第 4 個 24，第 7 個 42，差 18。",
-            tipWrong: "步數＝7−4＝3；差＝基數×步數＝6×3＝18。"
-          }
-        ]
-      }
-    },
+  /* ========== 情境文案 ========== */
+  function storyFor(base) {
+    if (base === 4) {
+      return {
+        emoji: "🐸",
+        short: "🐸 青蛙 4 腿",
+        long: "🐸 一隻青蛙有 4 條腿。排成一列青蛙，總腿數就係 4 的倍數。"
+      };
+    }
+    if (base === 6) {
+      return {
+        emoji: "🦟",
+        short: "🦟 蜻蜓 6 腿",
+        long: "🦟 一隻蜻蜓有 6 條腿。排成一列蜻蜓，總腿數就係 6 的倍數。"
+      };
+    }
+    if (base === 3) {
+      return {
+        emoji: "🍬",
+        short: "🍬 每組 3 粒糖",
+        long: "🍬 每組有 3 粒糖。1 組、2 組、3 組……總粒數就係 3 的倍數。"
+      };
+    }
+    if (base === 5) {
+      return {
+        emoji: "⭐",
+        short: "⭐ 每組 5 粒珠",
+        long: "⭐ 每組有 5 粒珠。1 組、2 組、3 組……總粒數就係 5 的倍數。"
+      };
+    }
+    if (base === 8) {
+      return {
+        emoji: "📦",
+        short: "📦 每箱 8 件",
+        long: "📦 每箱有 8 件。1 箱、2 箱、3 箱……總件數就係 8 的倍數。"
+      };
+    }
+    return {
+      emoji: "🔢",
+      short: "🔢 每組有 " + base + " 個",
+      long: "🔢 每組有 " + base + " 個。1 組、2 組、3 組……總數就係 " + base + " 的倍數。"
+    };
+  }
 
+  /* ========== 關卡 meta ========== */
+  const LESSON_META = {
+    1: {
+      name: "第幾個倍數探險",
+      emoji: "🔢",
+      goal: "用「第幾個」讀倍數：第 n 個＝基數×n；相鄰差＝基數；倍數無限延長。"
+    },
     2: {
       name: "同一倍數・不同問法",
       emoji: "🔀",
-      goal: "同一基數，分清：第 n 個／最初 n 個／以內有哪些／有多少個。",
-      banks: {
-        support: [
-          {
-            id: "L2S1", type: "withinList", typeLabel: "以內有哪些",
-            q: "50 以內，8 的倍數有哪些？（點選全部正確答案，再按確認）",
-            mode: "multi",
-            pool: [8, 16, 24, 32, 36, 40, 48, 56],
-            answer: [8, 16, 24, 32, 40, 48],
-            hint: "「以內」含 50。8×1…8×6＝48（≤50）；8×7＝56>50 唔計。36 唔係 8 的倍數。",
-            tipWrong: "先讀「50 以內」同「8 的倍數」。逐個用 ÷8 或列乘數表檢查。"
-          },
-          {
-            id: "L2S2", type: "withinList", typeLabel: "以內有哪些",
-            q: "50 以內，15 的倍數有哪些？請選出正確嗰一組。",
-            mode: "single",
-            choices: ["15, 30, 45", "15, 30, 45, 60", "10, 15, 30, 45", "15, 30, 40, 45"],
-            answer: "15, 30, 45",
-            hint: "15×1=15，15×2=30，15×3=45，15×4=60>50。以內含上限，但 50 本身唔係 15 的倍數。",
-            tipWrong: "列到超過 50 就停。60 唔喺 50 以內。"
-          },
-          {
-            id: "L2S3", type: "nth", typeLabel: "同基數對照・第n個",
-            story: "🔢 同一基數 4 —— 唔同問法",
-            q: "4 的第 6 個倍數是多少？",
-            mode: "single",
-            choices: ["20", "24", "28", "6"],
-            answer: "24",
-            hint: "第 6 個＝4 × 6＝24。",
-            tipWrong: "「第 6 個」只要一個數：4×6。"
-          },
-          {
-            id: "L2S4", type: "firstN", typeLabel: "同基數對照・最初n個",
-            story: "🔢 同一基數 4 —— 唔同問法",
-            q: "列出 4 的最初 6 個倍數。請選出正確嗰一組。",
-            mode: "single",
-            choices: ["4, 8, 12, 16, 20, 24", "0, 4, 8, 12, 16, 20", "4, 8, 12, 16, 20, 28", "8, 12, 16, 20, 24, 28"],
-            answer: "4, 8, 12, 16, 20, 24",
-            hint: "最初 6 個＝4×1 至 4×6。由 1 倍開始，唔計 0。",
-            tipWrong: "「最初 6 個」係一組數；「第 6 個」只係最後嗰個 24。兩者唔同！"
-          },
-          {
-            id: "L2S5", type: "withinList", typeLabel: "同基數對照・以內有哪些",
-            story: "🔢 同一基數 4 —— 唔同問法",
-            q: "24 以內，4 的倍數有哪些？請選出正確嗰一組。",
-            mode: "single",
-            choices: ["4, 8, 12, 16, 20, 24", "4, 8, 12, 16, 20", "8, 12, 16, 20, 24", "4, 8, 12, 16, 24"],
-            answer: "4, 8, 12, 16, 20, 24",
-            hint: "「以內」含 24。4×1…4×6＝24。呢題答案組合同「最初 6 個」一樣——因為 24 剛好係第 6 個。",
-            tipWrong: "含上限 24。讀清楚係「有哪些」（列出）唔係「有多少個」。"
-          },
-          {
-            id: "L2S6", type: "howMany", typeLabel: "同基數對照・有多少個",
-            story: "🔢 同一基數 4 —— 唔同問法",
-            q: "24 以內有多少個 4 的倍數？",
-            mode: "single",
-            choices: ["5", "6", "7", "24"],
-            answer: "6",
-            hint: "24÷4＝6，剛好整除，所以有 6 個。問「有多少個」答案係個數，唔係列出倍數。",
-            tipWrong: "「有多少個」→ 數個數（或上限÷基數取商）。唔好答成 24。"
-          }
-        ],
-        basic: [
-          {
-            id: "L2B1", type: "withinList", typeLabel: "以內有哪些",
-            q: "100 以內，12 的倍數有哪些？請選出正確嗰一組。",
-            mode: "single",
-            choices: [
-              "12, 24, 36, 48, 60, 72, 84, 96",
-              "12, 24, 36, 48, 60, 72, 84, 96, 108",
-              "12, 24, 36, 48, 60, 72, 84",
-              "10, 12, 24, 36, 48, 60, 72, 84, 96"
-            ],
-            answer: "12, 24, 36, 48, 60, 72, 84, 96",
-            hint: "12×1…12×8＝96≤100；12×9＝108>100。以內含 100，但 100 唔係 12 的倍數。",
-            tipWrong: "列到 ≤100 為止。108 超出。"
-          },
-          {
-            id: "L2B2", type: "nth", typeLabel: "第幾個",
-            q: "7 的第 8 個倍數是多少？",
-            mode: "single",
-            choices: ["49", "56", "63", "48"],
-            answer: "56",
-            hint: "第 8 個＝7 × 8＝56。",
-            tipWrong: "「第 8 個」＝7×8，唔係 7×7（第 7 個）。"
-          },
-          {
-            id: "L2B3", type: "withinList", typeLabel: "範圍以內・有哪些",
-            q: "30 至 70 之間，13 的倍數有哪些？（端點 30、70 都要檢查）請選出正確嗰一組。",
-            mode: "single",
-            choices: ["39, 52, 65", "26, 39, 52, 65", "39, 52, 65, 78", "30, 39, 52, 65, 70"],
-            answer: "39, 52, 65",
-            hint: "13×3=39，13×4=52，13×5=65；13×2=26<30，13×6=78>70。30 同 70 都唔係 13 的倍數。",
-            tipWrong: "「之間」要睇上下限。端點唔係倍數就唔選。讀題，唔好假設端點一定計。"
-          },
-          {
-            id: "L2B4", type: "nth", typeLabel: "同基數對照・第n個",
-            story: "🔢 同一基數 6 —— 唔同問法",
-            q: "6 的第 6 個倍數是多少？",
-            mode: "single",
-            choices: ["30", "36", "42", "6"],
-            answer: "36",
-            hint: "第 6 個＝6 × 6＝36。",
-            tipWrong: "只要一個數。唔好同「最初 6 個」搞亂。"
-          },
-          {
-            id: "L2B5", type: "firstN", typeLabel: "同基數對照・最初n個",
-            story: "🔢 同一基數 6 —— 唔同問法",
-            q: "列出 6 的最初 6 個倍數。請選出正確嗰一組。",
-            mode: "single",
-            choices: ["6, 12, 18, 24, 30, 36", "0, 6, 12, 18, 24, 30", "6, 12, 18, 24, 30, 42", "12, 18, 24, 30, 36, 42"],
-            answer: "6, 12, 18, 24, 30, 36",
-            hint: "6×1 至 6×6。由 1 倍開始。",
-            tipWrong: "「最初 6 個」係一列；「第 6 個」只係 36。"
-          },
-          {
-            id: "L2B6", type: "howMany", typeLabel: "同基數對照・有多少個",
-            story: "🔢 同一基數 6 —— 唔同問法",
-            q: "24 以內有多少個 6 的倍數？",
-            mode: "single",
-            choices: ["3", "4", "5", "24"],
-            answer: "4",
-            hint: "6, 12, 18, 24 → 4 個。24÷6＝4。",
-            tipWrong: "問個數。24 以內含 24。"
-          },
-          {
-            id: "L2B7", type: "howMany", typeLabel: "上限非倍數",
-            story: "🔢 同一基數 6 —— 注意上限",
-            q: "22 以內有多少個 6 的倍數？",
-            mode: "single",
-            choices: ["3", "4", "2", "22"],
-            answer: "3",
-            hint: "6, 12, 18（24>22）。22÷6＝3 餘 4 → 取商 3。上限 22 本身唔係倍數。",
-            tipWrong: "上限唔係倍數時，唔可以當「有 22÷6 向上」。要向下取整。"
-          }
-        ],
-        challenge: [
-          {
-            id: "L2C1", type: "next", typeLabel: "下一個倍數",
-            q: "96 是 16 的倍數，下一個 16 的倍數是多少？",
-            mode: "single",
-            choices: ["104", "112", "128", "100"],
-            answer: "112",
-            hint: "下一個＝而家呢個＋基數。96＋16＝112。或者 16×7＝112（96＝16×6）。",
-            tipWrong: "「下一個」＝加一個基數，唔係加 1。"
-          },
-          {
-            id: "L2C2", type: "howMany", typeLabel: "有多少個",
-            q: "100 以內，21 的倍數有多少個？",
-            mode: "single",
-            choices: ["3", "4", "5", "21"],
-            answer: "4",
-            hint: "21, 42, 63, 84（105>100）。100÷21＝4 餘 16 → 4 個。",
-            tipWrong: "用「上限÷基數」取商。答案係個數 4，唔係某個倍數。"
-          },
-          {
-            id: "L2C3", type: "nth", typeLabel: "同基數對照・第n個",
-            story: "🔢 同一基數 4 —— 易混淆問法",
-            q: "4 的第 6 個倍數是多少？",
-            mode: "single",
-            choices: ["20", "24", "4, 8, 12, 16, 20, 24", "6"],
-            answer: "24",
-            hint: "只要一個數：4×6＝24。選項入面嗰組係「最初 6 個」，唔係呢題要嘅。",
-            tipWrong: "睇清「第 6 個」vs「最初 6 個」——一個數 vs 一組數。"
-          },
-          {
-            id: "L2C4", type: "firstN", typeLabel: "同基數對照・最初n個",
-            story: "🔢 同一基數 4 —— 易混淆問法",
-            q: "列出 4 的最初 6 個倍數。請選出正確嗰一組。",
-            mode: "single",
-            choices: ["24", "4, 8, 12, 16, 20, 24", "0, 4, 8, 12, 16, 20", "8, 12, 16, 20, 24, 28"],
-            answer: "4, 8, 12, 16, 20, 24",
-            hint: "要一組數，由 4×1 起。單答 24 係「第 6 個」先啱。",
-            tipWrong: "「最初 6 個」唔可以只答最後一個。"
-          },
-          {
-            id: "L2C5", type: "howMany", typeLabel: "同基數對照・有多少個",
-            story: "🔢 同一基數 4",
-            q: "24 以內有多少個 4 的倍數？",
-            mode: "single",
-            choices: ["4, 8, 12, 16, 20, 24", "6", "5", "24"],
-            answer: "6",
-            hint: "問「有多少個」→ 答 6。列出嗰組係「有哪些」。",
-            tipWrong: "同一範圍，問法唔同答案形式就唔同：個數 vs 列表。"
-          },
-          {
-            id: "L2C6", type: "howMany", typeLabel: "上限非倍數",
-            q: "22 以內有多少個 4 的倍數？",
-            mode: "single",
-            choices: ["5", "6", "4", "22"],
-            answer: "5",
-            hint: "4, 8, 12, 16, 20（24>22）。22÷4＝5 餘 2 → 5 個。",
-            tipWrong: "上限 22 唔係 4 的倍數；唔好當成 24 以內嗰 6 個。"
-          }
-        ]
-      }
+      goal: "同一基數，分清：第 n 個／最初 n 個／以內有哪些／有多少個。"
     },
-
     3: {
       name: "最接近與相鄰差",
       emoji: "🎯",
-      goal: "「最接近」＝上下兩個候選比距離；相鄰差＝基數；挑戰可反求基數。",
-      banks: {
-        support: [
-          {
-            id: "L3S1", type: "closest", typeLabel: "最接近",
-            q: "哪一個 5 的倍數最接近 22？",
-            mode: "single",
-            choices: ["15", "20", "25", "22"],
-            answer: "20",
-            hint: "上下候選：20（差 2）同 25（差 3）。20 較近。",
-            tipWrong: "搵最接近：先找上下兩個倍數，比較同目標嘅距離，揀較近嗰個。"
-          },
-          {
-            id: "L3S2", type: "closest", typeLabel: "最接近",
-            q: "哪一個 4 的倍數最接近 19？",
-            mode: "single",
-            choices: ["12", "16", "20", "19"],
-            answer: "20",
-            hint: "16 差 3；20 差 1。20 較近。",
-            tipWrong: "上下候選比距離：|19−16|=3，|19−20|=1 → 20。"
-          },
-          {
-            id: "L3S3", type: "diff", typeLabel: "相鄰差",
-            q: "5 的第 3 個倍數同第 4 個倍數相差多少？",
-            mode: "single",
-            choices: ["1", "3", "5", "15"],
-            answer: "5",
-            hint: "相鄰差＝基數＝5。（20−15＝5）",
-            tipWrong: "相鄰兩個倍數相差永遠＝基數本身。"
-          },
-          {
-            id: "L3S4", type: "closest", typeLabel: "最接近",
-            q: "哪一個 3 的倍數最接近 20？",
-            mode: "single",
-            choices: ["18", "21", "15", "20"],
-            answer: "21",
-            hint: "18 差 2；21 差 1。21 較近。",
-            tipWrong: "比較距離：|20−18|=2，|20−21|=1 → 21。"
-          },
-          {
-            id: "L3S5", type: "diff", typeLabel: "相鄰差",
-            story: "🐸 複習：相鄰差",
-            q: "4 的任意兩個相鄰倍數相差多少？",
-            mode: "single",
-            choices: ["1", "2", "4", "8"],
-            answer: "4",
-            hint: "相鄰差＝基數＝4。",
-            tipWrong: "記住：相鄰差＝基數，同「最接近」係兩種唔同技能。"
-          },
-          {
-            id: "L3S6", type: "closest", typeLabel: "最接近",
-            q: "哪一個 6 的倍數最接近 25？",
-            mode: "single",
-            choices: ["18", "24", "30", "25"],
-            answer: "24",
-            hint: "24 差 1；30 差 5。24 近得多。",
-            tipWrong: "上下候選比距離，唔好見到「接近」就揀大過目標嘅。"
-          }
-        ],
-        basic: [
-          {
-            id: "L3B1", type: "closest", typeLabel: "最接近",
-            q: "哪一個 17 的倍數最接近 50？",
-            mode: "single",
-            choices: ["34", "51", "68", "50"],
-            answer: "51",
-            hint: "17×2=34（差 16）；17×3=51（差 1）。51 遠較接近。",
-            tipWrong: "上下候選比距離：34 同 51，邊個離 50 近？"
-          },
-          {
-            id: "L3B2", type: "diff", typeLabel: "相鄰差",
-            q: "17 的第 5 個倍數同第 6 個倍數相差多少？",
-            mode: "single",
-            choices: ["1", "5", "6", "17"],
-            answer: "17",
-            hint: "第 5 個＝85，第 6 個＝102，差 17＝基數。",
-            tipWrong: "相鄰差＝基數，唔使計到兩個倍數先都得——但計出嚟核對更好。"
-          },
-          {
-            id: "L3B3", type: "closest", typeLabel: "最接近",
-            q: "哪一個 9 的倍數最接近 40？",
-            mode: "single",
-            choices: ["27", "36", "45", "40"],
-            answer: "36",
-            hint: "36 差 4；45 差 5。36 較近。",
-            tipWrong: "比較 |40−36| 同 |40−45|。"
-          },
-          {
-            id: "L3B4", type: "closest", typeLabel: "最接近",
-            q: "哪一個 8 的倍數最接近 59？",
-            mode: "single",
-            choices: ["48", "56", "64", "59"],
-            answer: "56",
-            hint: "56 差 3；64 差 5。56 較近。",
-            tipWrong: "比較 |59−56| 同 |59−64|。"
-          },
-          {
-            id: "L3B5", type: "diff", typeLabel: "相鄰差",
-            q: "9 的第 4 個倍數同第 5 個倍數相差多少？",
-            mode: "single",
-            choices: ["1", "4", "5", "9"],
-            answer: "9",
-            hint: "相鄰差＝9。",
-            tipWrong: "差＝基數，唔係序位差 1。"
-          },
-          {
-            id: "L3B6", type: "closest", typeLabel: "最接近",
-            q: "哪一個 13 的倍數最接近 80？",
-            mode: "single",
-            choices: ["65", "78", "91", "80"],
-            answer: "78",
-            hint: "13×6=78（差 2）；13×7=91（差 11）。78 較近。",
-            tipWrong: "上下候選 78 同 91，比距離。"
-          }
-        ],
-        challenge: [
-          {
-            id: "L3C1", type: "closest", typeLabel: "最接近",
-            q: "哪一個 17 的倍數最接近 50？",
-            mode: "single",
-            choices: ["34", "51", "17", "50"],
-            answer: "51",
-            hint: "34 差 16；51 差 1 → 51。",
-            tipWrong: "最接近唔等於「不大於」——可以大過目標（好似 51>50）。"
-          },
-          {
-            id: "L3C2", type: "reverse", typeLabel: "反求基數",
-            q: "某數的第 4 個倍數是 76。這個數（基數）是多少？",
-            mode: "single",
-            choices: ["16", "19", "18", "76"],
-            answer: "19",
-            hint: "第 4 個＝基數×4＝76 → 基數＝76÷4＝19。",
-            tipWrong: "反過來：已知倍數同序位，求基數＝倍數÷序位。"
-          },
-          {
-            id: "L3C3", type: "diff", typeLabel: "相鄰差",
-            q: "19 的第 5 個倍數同第 6 個倍數相差多少？",
-            mode: "single",
-            choices: ["1", "5", "19", "95"],
-            answer: "19",
-            hint: "相鄰差＝基數＝19。",
-            tipWrong: "同第 2 節唔同：呢度練「差＝基數」同「最接近」一齊用。"
-          },
-          {
-            id: "L3C4", type: "closest", typeLabel: "最接近",
-            q: "哪一個 14 的倍數最接近 100？",
-            mode: "single",
-            choices: ["84", "98", "112", "100"],
-            answer: "98",
-            hint: "14×7=98（差 2）；14×8=112（差 12）。",
-            tipWrong: "比距離，唔好見 100 就以為答案係 100（100 唔係 14 的倍數）。"
-          },
-          {
-            id: "L3C5", type: "floorMax", typeLabel: "不大於・區分題",
-            q: "【注意問法】不大於 50 的、最大的 17 的倍數是多少？（呢題唔係問「最接近」）",
-            mode: "single",
-            choices: ["34", "51", "17", "50"],
-            answer: "34",
-            hint: "「不大於 50」＝≤50。51>50 唔得，所以係 34。同「最接近 50→51」唔同！",
-            tipWrong: "題幹寫「不大於」→ 唔可以選 51。呢題同「最接近」答案唔同，讀清條件！"
-          },
-          {
-            id: "L3C6", type: "reverse", typeLabel: "反求基數",
-            q: "某數的第 5 個倍數是 85。這個數是多少？",
-            mode: "single",
-            choices: ["15", "16", "17", "85"],
-            answer: "17",
-            hint: "基數＝85÷5＝17。",
-            tipWrong: "倍數÷序位＝基數。"
-          }
-        ]
-      }
+      goal: "「最接近」＝上下兩個候選比距離；相鄰差＝基數；挑戰可反求基數。"
     }
   };
-
 
   const LEVEL_META = {
     support: { name: "支援", badge: "badge-support", emoji: "🌱" },
     basic: { name: "基本", badge: "badge-basic", emoji: "📘" },
     challenge: { name: "挑戰", badge: "badge-challenge", emoji: "🔥" }
+  };
+
+  const BASE_RANGES = {
+    1: { support: [3, 4, 5, 6], basic: [3, 4, 5, 6, 7, 8], challenge: [4, 5, 6, 7, 8, 9] },
+    2: { support: [3, 4, 5, 6], basic: [3, 4, 5, 6, 7, 8], challenge: [4, 5, 6, 7, 8, 9] },
+    3: { support: [3, 4, 5, 6], basic: [4, 5, 6, 7, 8, 9], challenge: [5, 6, 7, 8, 9] }
   };
 
   const QUESTIONS_PER_ROUND = 6;
@@ -906,6 +432,8 @@
   let answered = false;
   let multiSelected = new Set();
   let resultsLog = [];
+  let roundBase = null;
+  let lastBases = { 1: null, 2: null, 3: null };
 
   const $ = (id) => document.getElementById(id);
   const screens = { start: $("screen-start"), play: $("screen-play"), result: $("screen-result") };
@@ -941,24 +469,704 @@
   $("btn-retry").addEventListener("click", retryQuestion);
   $("btn-next").addEventListener("click", nextQuestion);
 
-  function shuffle(arr) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
+  /* ========== 抽基數（重開即換，盡量唔重複上一局）========== */
+  function pickBase(lessonNum, levelKey) {
+    const pool = BASE_RANGES[lessonNum][levelKey].slice();
+    const last = lastBases[lessonNum];
+    let candidates = pool.filter(function (b) { return b !== last; });
+    if (!candidates.length) candidates = pool;
+    const chosen = pickOne(candidates);
+    lastBases[lessonNum] = chosen;
+    return chosen;
+  }
+
+  function pickMigrateBase(mainBase, lessonNum, levelKey) {
+    const pool = BASE_RANGES[lessonNum][levelKey].filter(function (b) { return b !== mainBase; });
+    // Prefer classic migrate pair: if main is 4 prefer 6, if 6 prefer 4, else any other
+    if (mainBase === 4 && pool.indexOf(6) >= 0) return 6;
+    if (mainBase === 6 && pool.indexOf(4) >= 0) return 4;
+    return pool.length ? pickOne(pool) : (mainBase === 4 ? 6 : 4);
+  }
+
+  /* ========== 最接近輔助 ========== */
+  function closestMultiple(base, target) {
+    const lowerN = Math.floor(target / base);
+    const lower = lowerN * base;
+    const upper = (lowerN + 1) * base;
+    if (lowerN <= 0) return upper; // 由 1 倍起，唔用 0
+    const dL = Math.abs(target - lower);
+    const dU = Math.abs(target - upper);
+    if (dL < dU) return lower;
+    if (dU < dL) return upper;
+    // 距離相同：小學常見取較大（或任取）；為穩定取較大
+    return upper;
+  }
+
+  function closestTargetFor(base) {
+    // 搵一個目標，令上下候選距離唔同（避免平手），答案唔係目標本身
+    for (let tries = 0; tries < 40; tries++) {
+      const n = 3 + Math.floor(Math.random() * 10); // 約第 3–12 個附近
+      const mid = base * n;
+      const offset = 1 + Math.floor(Math.random() * (base - 1));
+      // 偏向較近一邊
+      const towardUpper = Math.random() < 0.5;
+      const target = towardUpper ? mid + offset : mid - offset;
+      if (target <= base) continue;
+      if (target % base === 0) continue;
+      const ans = closestMultiple(base, target);
+      if (ans === target) continue;
+      const lowerN = Math.floor(target / base);
+      const lower = Math.max(base, lowerN * base);
+      const upper = (Math.floor(target / base) + 1) * base;
+      if (Math.abs(target - lower) === Math.abs(target - upper)) continue;
+      return { target: target, answer: ans, lower: lower, upper: upper };
     }
-    return a;
+    // fallback
+    const target = base * 5 + Math.floor(base / 2);
+    return {
+      target: target,
+      answer: closestMultiple(base, target),
+      lower: Math.floor(target / base) * base,
+      upper: (Math.floor(target / base) + 1) * base
+    };
+  }
+
+  /* ========== 第1節題庫生成 ========== */
+  function buildLesson1(levelKey, base, migrateBase) {
+    const st = storyFor(base);
+    const mig = storyFor(migrateBase);
+    const bank = [];
+
+    if (levelKey === "support") {
+      bank.push({
+        id: "L1S1", type: "nth", typeLabel: "第幾個",
+        story: st.long,
+        q: "第 1 個倍數（最小倍數）是多少？",
+        mode: "single",
+        choices: choiceSet(base, [0, 1, base * 2]),
+        answer: String(base),
+        visual: dualTable(base, 5, [1]),
+        hint: "第 1 個倍數＝" + base + " × 1＝" + base + "（該數本身）。由 1 倍開始，唔由 0 開始。",
+        tipWrong: "「第 1 個／最小倍數」＝基數本身。睇倍數表：第 1 個 → " + base + "。"
+      });
+      bank.push({
+        id: "L1S2", type: "nth", typeLabel: "第幾個",
+        story: st.short,
+        q: base + " 的第 3 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(base * 3, [base * 2, base * 4, 3]),
+        answer: String(base * 3),
+        visual: dualTable(base, 5, [3]),
+        hint: "第 3 個＝" + base + " × 3＝" + (base * 3) + "。倍數表：第 3 個 → " + (base * 3) + "。",
+        tipWrong: "「第幾個」→ 基數 × 第幾個。第 3 個＝" + base + "×3。"
+      });
+      bank.push({
+        id: "L1S3", type: "nth", typeLabel: "第幾個",
+        story: st.short,
+        q: base + " 的第 5 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(base * 5, [base * 4, base * 6, 5]),
+        answer: String(base * 5),
+        visual: dualTable(base, 6, [5]),
+        hint: "第 5 個＝" + base + " × 5＝" + (base * 5) + "。",
+        tipWrong: "對住倍數表：第 5 個下面嗰個數就係答案。"
+      });
+      bank.push({
+        id: "L1S4", type: "diff", typeLabel: "相鄰差",
+        story: st.short,
+        q: base + " 的第 2 個倍數同第 3 個倍數相差多少？",
+        mode: "single",
+        choices: choiceSet(base, [1, 2, base * 2]),
+        answer: String(base),
+        visual: dualTable(base, 5, [2, 3]),
+        hint: "相鄰兩個倍數相差＝基數本身＝" + base + "。（" + (base * 3) + "−" + (base * 2) + "＝" + base + "）",
+        tipWrong: "相鄰差永遠等於基數。第 2 個係 " + (base * 2) + "，第 3 個係 " + (base * 3) + "，差 " + base + "。"
+      });
+      bank.push({
+        id: "L1S5", type: "infinite", typeLabel: "有沒有最大",
+        q: base + " 的倍數有沒有「最大」的一個？",
+        mode: "single",
+        choices: [
+          "有，最大係 " + (base * 10),
+          "有，最大係 100",
+          "沒有，可以一直延長",
+          "只有 10 個倍數"
+        ],
+        answer: "沒有，可以一直延長",
+        hint: "倍數＝" + base + "×1、" + base + "×2、" + base + "×3… 可以一直乘落去，所以冇最大倍數。",
+        tipWrong: "倍數數列可以無限延長：第 11 個、第 12 個、第 100 個……都有。"
+      });
+      bank.push({
+        id: "L1S6", type: "nth", typeLabel: "短遷移・" + migrateBase,
+        story: mig.long,
+        q: migrateBase + " 的第 2 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(migrateBase * 2, [migrateBase, migrateBase * 3, 2]),
+        answer: String(migrateBase * 2),
+        hint: "方法一樣：第 2 個＝" + migrateBase + " × 2＝" + (migrateBase * 2) + "。",
+        tipWrong: "換咗基數 " + migrateBase + "，方法一樣：第 n 個＝" + migrateBase + " × n。"
+      });
+    } else if (levelKey === "basic") {
+      bank.push({
+        id: "L1B1", type: "nth", typeLabel: "第幾個",
+        story: st.short + " · 第幾個｜倍數",
+        q: "第 1 個倍數（最小倍數）是多少？",
+        mode: "single",
+        choices: choiceSet(base, [0, base * 2, 1]),
+        answer: String(base),
+        visual: dualTable(base, 4, [1]),
+        hint: "第 1 個＝" + base + "×1＝" + base + "（該數本身）。",
+        tipWrong: "最小／第 1 個倍數＝基數本身，唔係 0。"
+      });
+      bank.push({
+        id: "L1B2", type: "nth", typeLabel: "第幾個",
+        story: st.short,
+        q: base + " 的第 11 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(base * 11, [base * 10, base * 12, base * 11 + base]),
+        answer: String(base * 11),
+        hint: "第 11 個＝" + base + " × 11＝" + (base * 11) + "。可以延長倍數表：…第10個" + (base * 10) + "，第11個" + (base * 11) + "。",
+        tipWrong: "延長數列：唔使成條寫晒，用「基數 × 第幾個」直接計。"
+      });
+      bank.push({
+        id: "L1B3", type: "nth", typeLabel: "第幾個",
+        story: st.short,
+        q: base + " 的第 12 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(base * 12, [base * 11, base * 13, base * 9]),
+        answer: String(base * 12),
+        hint: "第 12 個＝" + base + " × 12＝" + (base * 12) + "。亦可以：第 11 個 " + (base * 11) + " 再加 " + base + "。",
+        tipWrong: "第 12 個＝" + base + "×12，或者由第 11 個（" + (base * 11) + "）再加一個基數 " + base + "。"
+      });
+      bank.push({
+        id: "L1B4", type: "infinite", typeLabel: "有沒有最大",
+        q: "倍數數列可以一直延長嗎？" + base + " 的倍數有沒有最大的一個？",
+        mode: "single",
+        choices: [
+          "可以延長，但有最大倍數",
+          "不可以延長，只有有限個",
+          "可以一直延長，沒有最大倍數",
+          "最大倍數係第 12 個"
+        ],
+        answer: "可以一直延長，沒有最大倍數",
+        hint: "第幾個可以係 13、14、100… 所以冇「最後一個」。",
+        tipWrong: "重點：倍數無限多，冇最大。"
+      });
+      bank.push({
+        id: "L1B5", type: "diff", typeLabel: "相鄰差",
+        story: st.short,
+        q: base + " 的相鄰兩個倍數相差多少？",
+        mode: "single",
+        choices: choiceSet(base, [1, 2, base * 2]),
+        answer: String(base),
+        visual: dualTable(base, 5, [3, 4]),
+        hint: "相鄰差＝基數＝" + base + "。例如 " + (base * 3) + " 同 " + (base * 4) + " 差 " + base + "。",
+        tipWrong: "無論邊兩個相鄰倍數，相差永遠係基數本身。"
+      });
+      bank.push({
+        id: "L1B6", type: "nth", typeLabel: "短遷移・" + migrateBase,
+        story: mig.short,
+        q: migrateBase + " 的第 4 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(migrateBase * 4, [migrateBase * 3, migrateBase * 5, migrateBase * 2]),
+        answer: String(migrateBase * 4),
+        hint: "第 4 個＝" + migrateBase + " × 4＝" + (migrateBase * 4) + "。",
+        tipWrong: "遷移到基數 " + migrateBase + "：第 n 個＝" + migrateBase + "×n。"
+      });
+    } else {
+      // challenge
+      bank.push({
+        id: "L1C1", type: "nth", typeLabel: "第幾個",
+        story: st.short,
+        q: base + " 的第 12 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(base * 12, [base * 11, base * 13, base * 10]),
+        answer: String(base * 12),
+        hint: base + " × 12＝" + (base * 12) + "。",
+        tipWrong: "直接用「基數 × 第幾個」，小心唔好計成 " + base + "×11 或 " + base + "×13。"
+      });
+      bank.push({
+        id: "L1C2", type: "diff", typeLabel: "隔幾步差",
+        story: st.short,
+        q: base + " 的第 3 個倍數同第 6 個倍數相差多少？（中間隔幾步？）",
+        mode: "single",
+        choices: choiceSet(base * 3, [3, base, base * 6]),
+        answer: String(base * 3),
+        hint: "第 3 個＝" + (base * 3) + "，第 6 個＝" + (base * 6) + "，差 " + (base * 3) + "。隔 3 步 → 差＝基數×3＝" + base + "×3＝" + (base * 3) + "。",
+        tipWrong: "隔幾步差＝基數 × 步數。由第 3 到第 6 隔 3 步，" + base + "×3＝" + (base * 3) + "。"
+      });
+      bank.push({
+        id: "L1C3", type: "diff", typeLabel: "隔幾步差",
+        q: base + " 的第 2 個倍數同第 7 個倍數相差多少？",
+        mode: "single",
+        choices: choiceSet(base * 5, [5, base * 4, base * 7]),
+        answer: String(base * 5),
+        hint: "隔 5 步 → " + base + "×5＝" + (base * 5) + "。或者 " + (base * 7) + "−" + (base * 2) + "＝" + (base * 5) + "。",
+        tipWrong: "步數＝7−2＝5；差＝" + base + "×5＝" + (base * 5) + "。"
+      });
+      bank.push({
+        id: "L1C4", type: "infinite", typeLabel: "有沒有最大",
+        q: "有人說「" + base + " 的最大倍數是 " + (base * 12) + "」。對嗎？",
+        mode: "single",
+        choices: [
+          "對，因為第 12 個係 " + (base * 12),
+          "不對，倍數可以一直延長，沒有最大",
+          "對，教科書只教到第 12 個",
+          "不對，最大應該係 " + (base * 11)
+        ],
+        answer: "不對，倍數可以一直延長，沒有最大",
+        hint: (base * 12) + " 只係第 12 個，後面仲有第 13 個＝" + (base * 13) + "……",
+        tipWrong: "任何「最大倍數」說法都錯——倍數無限。"
+      });
+      bank.push({
+        id: "L1C5", type: "nth", typeLabel: "短遷移・" + migrateBase,
+        story: mig.short,
+        q: migrateBase + " 的第 7 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(migrateBase * 7, [migrateBase * 6, migrateBase * 8, migrateBase * 5]),
+        answer: String(migrateBase * 7),
+        hint: migrateBase + " × 7＝" + (migrateBase * 7) + "。",
+        tipWrong: "第 7 個＝" + migrateBase + "×7。唔好同主基數 " + base + " 撈亂。"
+      });
+      bank.push({
+        id: "L1C6", type: "diff", typeLabel: "短遷移・差",
+        story: mig.short,
+        q: migrateBase + " 的第 4 個倍數同第 7 個倍數相差多少？",
+        mode: "single",
+        choices: choiceSet(migrateBase * 3, [3, migrateBase, migrateBase * 4]),
+        answer: String(migrateBase * 3),
+        hint: "隔 3 步 → " + migrateBase + "×3＝" + (migrateBase * 3) + "。第 4 個 " + (migrateBase * 4) + "，第 7 個 " + (migrateBase * 7) + "，差 " + (migrateBase * 3) + "。",
+        tipWrong: "步數＝7−4＝3；差＝基數×步數＝" + migrateBase + "×3＝" + (migrateBase * 3) + "。"
+      });
+    }
+    return bank;
+  }
+
+  /* ========== 第2節題庫生成 ========== */
+  function buildLesson2(levelKey, base) {
+    const bank = [];
+    const nSame = 6;
+    const limitExact = base * nSame; // 「最初 6 個」剛好等於 limitExact 以內
+    const limitNon = limitExact - 2; // 上限非倍數
+    if (limitNon < base) { /* unlikely */ }
+
+    function firstNList(b, n) {
+      const a = [];
+      for (let i = 1; i <= n; i++) a.push(b * i);
+      return a;
+    }
+
+    function withinList(b, limit) {
+      const a = [];
+      for (let i = 1; b * i <= limit; i++) a.push(b * i);
+      return a;
+    }
+
+    if (levelKey === "support") {
+      // 1 fixed textbook demo
+      bank.push({
+        id: "L2S-fixed1", type: "withinList", typeLabel: "以內有哪些・課文",
+        q: "50 以內，8 的倍數有哪些？（點選全部正確答案，再按確認）",
+        mode: "multi",
+        pool: [8, 16, 24, 32, 36, 40, 48, 56],
+        answer: [8, 16, 24, 32, 40, 48],
+        hint: "「以內」含 50。8×1…8×6＝48（≤50）；8×7＝56>50 唔計。36 唔係 8 的倍數。",
+        tipWrong: "先讀「50 以內」同「8 的倍數」。逐個用 ÷8 或列倍數表檢查。"
+      });
+      // optional second fixed lightly — keep one more short demo as single
+      bank.push({
+        id: "L2S-fixed2", type: "withinList", typeLabel: "以內有哪些・課文",
+        q: "50 以內，15 的倍數有哪些？請選出正確嗰一組。",
+        mode: "single",
+        choices: ["15, 30, 45", "15, 30, 45, 60", "10, 15, 30, 45", "15, 30, 40, 45"],
+        answer: "15, 30, 45",
+        hint: "15×1=15，15×2=30，15×3=45，15×4=60>50。以內含上限，但 50 本身唔係 15 的倍數。",
+        tipWrong: "列到超過 50 就停。60 唔喺 50 以內。"
+      });
+      // dynamic same-base contrast (main practice)
+      bank.push({
+        id: "L2S3", type: "nth", typeLabel: "同基數對照・第n個",
+        story: "🔢 同一基數 " + base + " —— 唔同問法",
+        q: base + " 的第 " + nSame + " 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(base * nSame, [base * (nSame - 1), base * (nSame + 1), nSame]),
+        answer: String(base * nSame),
+        hint: "第 " + nSame + " 個＝" + base + " × " + nSame + "＝" + (base * nSame) + "。",
+        tipWrong: "「第 " + nSame + " 個」只要一個數：" + base + "×" + nSame + "。"
+      });
+      const first6 = firstNList(base, nSame);
+      bank.push({
+        id: "L2S4", type: "firstN", typeLabel: "同基數對照・最初n個",
+        story: "🔢 同一基數 " + base + " —— 唔同問法",
+        q: "列出 " + base + " 的最初 " + nSame + " 個倍數。請選出正確嗰一組。",
+        mode: "single",
+        choices: shuffle([
+          listStr(first6),
+          listStr([0].concat(first6.slice(0, nSame - 1))),
+          listStr(first6.slice(0, nSame - 1).concat([base * (nSame + 1)])),
+          listStr(first6.slice(1).concat([base * (nSame + 1)]))
+        ]),
+        answer: listStr(first6),
+        hint: "最初 " + nSame + " 個＝" + base + "×1 至 " + base + "×" + nSame + "。由 1 倍開始，唔計 0。",
+        tipWrong: "「最初 " + nSame + " 個」係一組數；「第 " + nSame + " 個」只係最後嗰個 " + (base * nSame) + "。兩者唔同！"
+      });
+      bank.push({
+        id: "L2S5", type: "withinList", typeLabel: "同基數對照・以內有哪些",
+        story: "🔢 同一基數 " + base + " —— 唔同問法",
+        q: limitExact + " 以內，" + base + " 的倍數有哪些？請選出正確嗰一組。",
+        mode: "single",
+        choices: shuffle([
+          listStr(first6),
+          listStr(first6.slice(0, nSame - 1)),
+          listStr(first6.slice(1)),
+          listStr(first6.filter(function (x, i) { return i !== 3; }).concat([base * (nSame + 1)]).slice(0, nSame))
+        ]),
+        answer: listStr(first6),
+        hint: "「以內」含 " + limitExact + "。" + base + "×1…" + base + "×" + nSame + "＝" + limitExact + "。呢題答案組合同「最初 " + nSame + " 個」一樣——因為 " + limitExact + " 剛好係第 " + nSame + " 個。",
+        tipWrong: "含上限 " + limitExact + "。讀清楚係「有哪些」（列出）唔係「有多少個」。"
+      });
+      bank.push({
+        id: "L2S6", type: "howMany", typeLabel: "同基數對照・有多少個",
+        story: "🔢 同一基數 " + base + " —— 唔同問法",
+        q: limitExact + " 以內有多少個 " + base + " 的倍數？",
+        mode: "single",
+        choices: choiceSet(nSame, [nSame - 1, nSame + 1, limitExact]),
+        answer: String(nSame),
+        hint: limitExact + "÷" + base + "＝" + nSame + "，剛好整除，所以有 " + nSame + " 個。問「有多少個」答案係個數，唔係列出倍數。",
+        tipWrong: "「有多少個」→ 數個數（或上限÷基數取商）。唔好答成 " + limitExact + "。"
+      });
+    } else if (levelKey === "basic") {
+      // fixed textbook demos (1–2)
+      bank.push({
+        id: "L2B-fixed1", type: "withinList", typeLabel: "以內有哪些・課文",
+        q: "100 以內，12 的倍數有哪些？請選出正確嗰一組。",
+        mode: "single",
+        choices: [
+          "12, 24, 36, 48, 60, 72, 84, 96",
+          "12, 24, 36, 48, 60, 72, 84, 96, 108",
+          "12, 24, 36, 48, 60, 72, 84",
+          "10, 12, 24, 36, 48, 60, 72, 84, 96"
+        ],
+        answer: "12, 24, 36, 48, 60, 72, 84, 96",
+        hint: "12×1…12×8＝96≤100；12×9＝108>100。以內含 100，但 100 唔係 12 的倍數。",
+        tipWrong: "列到 ≤100 為止。108 超出。"
+      });
+      bank.push({
+        id: "L2B-fixed2", type: "nth", typeLabel: "第幾個・課文",
+        q: "7 的第 8 個倍數是多少？",
+        mode: "single",
+        choices: ["49", "56", "63", "48"],
+        answer: "56",
+        hint: "第 8 個＝7 × 8＝56。",
+        tipWrong: "「第 8 個」＝7×8，唔係 7×7（第 7 個）。"
+      });
+      // dynamic same-base
+      bank.push({
+        id: "L2B3", type: "nth", typeLabel: "同基數對照・第n個",
+        story: "🔢 同一基數 " + base + " —— 唔同問法",
+        q: base + " 的第 " + nSame + " 個倍數是多少？",
+        mode: "single",
+        choices: choiceSet(base * nSame, [base * (nSame - 1), base * (nSame + 1), nSame]),
+        answer: String(base * nSame),
+        hint: "第 " + nSame + " 個＝" + base + " × " + nSame + "＝" + (base * nSame) + "。",
+        tipWrong: "只要一個數。唔好同「最初 " + nSame + " 個」搞亂。"
+      });
+      const first6b = firstNList(base, nSame);
+      bank.push({
+        id: "L2B4", type: "firstN", typeLabel: "同基數對照・最初n個",
+        story: "🔢 同一基數 " + base + " —— 唔同問法",
+        q: "列出 " + base + " 的最初 " + nSame + " 個倍數。請選出正確嗰一組。",
+        mode: "single",
+        choices: shuffle([
+          listStr(first6b),
+          listStr([0].concat(first6b.slice(0, nSame - 1))),
+          listStr(first6b.slice(0, nSame - 1).concat([base * (nSame + 1)])),
+          listStr(first6b.slice(1).concat([base * (nSame + 1)]))
+        ]),
+        answer: listStr(first6b),
+        hint: base + "×1 至 " + base + "×" + nSame + "。由 1 倍開始。",
+        tipWrong: "「最初 " + nSame + " 個」係一列；「第 " + nSame + " 個」只係 " + (base * nSame) + "。"
+      });
+      bank.push({
+        id: "L2B5", type: "howMany", typeLabel: "同基數對照・有多少個",
+        story: "🔢 同一基數 " + base + " —— 唔同問法",
+        q: limitExact + " 以內有多少個 " + base + " 的倍數？",
+        mode: "single",
+        choices: choiceSet(nSame, [nSame - 1, nSame + 1, limitExact]),
+        answer: String(nSame),
+        hint: listStr(first6b) + " → " + nSame + " 個。" + limitExact + "÷" + base + "＝" + nSame + "。",
+        tipWrong: "問個數。" + limitExact + " 以內含 " + limitExact + "。"
+      });
+      const countNon = withinList(base, limitNon).length;
+      bank.push({
+        id: "L2B6", type: "howMany", typeLabel: "上限非倍數",
+        story: "🔢 同一基數 " + base + " —— 注意上限",
+        q: limitNon + " 以內有多少個 " + base + " 的倍數？",
+        mode: "single",
+        choices: choiceSet(countNon, [countNon + 1, countNon - 1, limitNon]),
+        answer: String(countNon),
+        hint: listStr(withinList(base, limitNon)) + "（" + limitExact + ">" + limitNon + "）。" + limitNon + "÷" + base + " 取商＝" + countNon + "。上限本身唔係倍數。",
+        tipWrong: "上限唔係倍數時，要向下取整。唔好當成 " + limitExact + " 以內嗰 " + nSame + " 個。"
+      });
+    } else {
+      // challenge: 1–2 fixed + dynamic contrast
+      bank.push({
+        id: "L2C-fixed1", type: "next", typeLabel: "下一個倍數・課文",
+        q: "96 是 16 的倍數，下一個 16 的倍數是多少？",
+        mode: "single",
+        choices: ["104", "112", "128", "100"],
+        answer: "112",
+        hint: "下一個＝而家呢個＋基數。96＋16＝112。或者 16×7＝112（96＝16×6）。",
+        tipWrong: "「下一個」＝加一個基數，唔係加 1。"
+      });
+      bank.push({
+        id: "L2C-fixed2", type: "howMany", typeLabel: "有多少個・課文",
+        q: "100 以內，21 的倍數有多少個？",
+        mode: "single",
+        choices: ["3", "4", "5", "21"],
+        answer: "4",
+        hint: "21, 42, 63, 84（105>100）。100÷21＝4 餘 16 → 4 個。",
+        tipWrong: "用「上限÷基數」取商。答案係個數 4，唔係某個倍數。"
+      });
+      bank.push({
+        id: "L2C3", type: "nth", typeLabel: "同基數對照・第n個",
+        story: "🔢 同一基數 " + base + " —— 易混淆問法",
+        q: base + " 的第 " + nSame + " 個倍數是多少？",
+        mode: "single",
+        choices: shuffle([
+          String(base * (nSame - 1)),
+          String(base * nSame),
+          listStr(firstNList(base, nSame)),
+          String(nSame)
+        ]),
+        answer: String(base * nSame),
+        hint: "只要一個數：" + base + "×" + nSame + "＝" + (base * nSame) + "。選項入面嗰組係「最初 " + nSame + " 個」，唔係呢題要嘅。",
+        tipWrong: "睇清「第 " + nSame + " 個」vs「最初 " + nSame + " 個」——一個數 vs 一組數。"
+      });
+      bank.push({
+        id: "L2C4", type: "firstN", typeLabel: "同基數對照・最初n個",
+        story: "🔢 同一基數 " + base + " —— 易混淆問法",
+        q: "列出 " + base + " 的最初 " + nSame + " 個倍數。請選出正確嗰一組。",
+        mode: "single",
+        choices: shuffle([
+          String(base * nSame),
+          listStr(firstNList(base, nSame)),
+          listStr([0].concat(firstNList(base, nSame - 1))),
+          listStr(firstNList(base, nSame).slice(1).concat([base * (nSame + 1)]))
+        ]),
+        answer: listStr(firstNList(base, nSame)),
+        hint: "要一組數，由 " + base + "×1 起。單答 " + (base * nSame) + " 係「第 " + nSame + " 個」先啱。",
+        tipWrong: "「最初 " + nSame + " 個」唔可以只答最後一個。"
+      });
+      bank.push({
+        id: "L2C5", type: "howMany", typeLabel: "同基數對照・有多少個",
+        story: "🔢 同一基數 " + base,
+        q: limitExact + " 以內有多少個 " + base + " 的倍數？",
+        mode: "single",
+        choices: shuffle([
+          listStr(firstNList(base, nSame)),
+          String(nSame),
+          String(nSame - 1),
+          String(limitExact)
+        ]),
+        answer: String(nSame),
+        hint: "問「有多少個」→ 答 " + nSame + "。列出嗰組係「有哪些」。",
+        tipWrong: "同一範圍，問法唔同答案形式就唔同：個數 vs 列表。"
+      });
+      const countNonC = withinList(base, limitNon).length;
+      bank.push({
+        id: "L2C6", type: "howMany", typeLabel: "上限非倍數",
+        q: limitNon + " 以內有多少個 " + base + " 的倍數？",
+        mode: "single",
+        choices: choiceSet(countNonC, [countNonC + 1, countNonC - 1, limitNon]),
+        answer: String(countNonC),
+        hint: listStr(withinList(base, limitNon)) + "（" + limitExact + ">" + limitNon + "）。" + limitNon + "÷" + base + " 取商＝" + countNonC + "。",
+        tipWrong: "上限 " + limitNon + " 唔係 " + base + " 的倍數；唔好當成 " + limitExact + " 以內嗰 " + nSame + " 個。"
+      });
+    }
+    return bank;
+  }
+
+  /* ========== 第3節題庫生成 ========== */
+  function buildLesson3(levelKey, base) {
+    const bank = [];
+    const st = storyFor(base);
+
+    function closestQ(b, typeLabel) {
+      const info = closestTargetFor(b);
+      const distractors = uniqNums([
+        info.lower,
+        info.upper,
+        info.target,
+        b,
+        b * 2,
+        info.answer + b,
+        info.answer - b
+      ]).filter(function (x) { return x > 0 && x !== info.answer; });
+      return {
+        id: "L3-dyn-closest-" + b + "-" + info.target,
+        type: "closest",
+        typeLabel: typeLabel || "最接近",
+        q: "哪一個 " + b + " 的倍數最接近 " + info.target + "？",
+        mode: "single",
+        choices: choiceSet(info.answer, distractors.slice(0, 5)),
+        answer: String(info.answer),
+        hint: info.lower + " 差 " + Math.abs(info.target - info.lower) + "；" +
+              info.upper + " 差 " + Math.abs(info.target - info.upper) + "。" +
+              info.answer + " 較近。",
+        tipWrong: "搵最接近：先找上下兩個倍數，比較同目標嘅距離，揀較近嗰個。"
+      };
+    }
+
+    if (levelKey === "support") {
+      bank.push(closestQ(base, "最接近"));
+      // second closest with same base, different target
+      bank.push(closestQ(base, "最接近"));
+      bank.push({
+        id: "L3S3", type: "diff", typeLabel: "相鄰差",
+        q: base + " 的第 3 個倍數同第 4 個倍數相差多少？",
+        mode: "single",
+        choices: choiceSet(base, [1, 3, base * 3]),
+        answer: String(base),
+        hint: "相鄰差＝基數＝" + base + "。（" + (base * 4) + "−" + (base * 3) + "＝" + base + "）",
+        tipWrong: "相鄰兩個倍數相差永遠＝基數本身。"
+      });
+      // another base lightly for variety within support — still use round base primarily
+      bank.push(closestQ(base === 3 ? 4 : 3, "最接近"));
+      bank.push({
+        id: "L3S5", type: "diff", typeLabel: "相鄰差",
+        story: st.short + " · 複習：相鄰差",
+        q: base + " 的任意兩個相鄰倍數相差多少？",
+        mode: "single",
+        choices: choiceSet(base, [1, 2, base * 2]),
+        answer: String(base),
+        hint: "相鄰差＝基數＝" + base + "。",
+        tipWrong: "記住：相鄰差＝基數，同「最接近」係兩種唔同技能。"
+      });
+      bank.push(closestQ(base, "最接近"));
+    } else if (levelKey === "basic") {
+      // 1 fixed textbook: 17 closest to 50 → 51
+      bank.push({
+        id: "L3B-fixed1", type: "closest", typeLabel: "最接近・課文",
+        q: "哪一個 17 的倍數最接近 50？",
+        mode: "single",
+        choices: ["34", "51", "68", "50"],
+        answer: "51",
+        hint: "17×2=34（差 16）；17×3=51（差 1）。51 遠較接近。",
+        tipWrong: "上下候選比距離：34 同 51，邊個離 50 近？"
+      });
+      bank.push({
+        id: "L3B2", type: "diff", typeLabel: "相鄰差",
+        q: base + " 的第 5 個倍數同第 6 個倍數相差多少？",
+        mode: "single",
+        choices: choiceSet(base, [1, 5, 6]),
+        answer: String(base),
+        hint: "第 5 個＝" + (base * 5) + "，第 6 個＝" + (base * 6) + "，差 " + base + "＝基數。",
+        tipWrong: "相鄰差＝基數，唔使計到兩個倍數先都得——但計出嚟核對更好。"
+      });
+      bank.push(closestQ(base, "最接近"));
+      bank.push(closestQ(base, "最接近"));
+      bank.push({
+        id: "L3B5", type: "diff", typeLabel: "相鄰差",
+        q: base + " 的第 4 個倍數同第 5 個倍數相差多少？",
+        mode: "single",
+        choices: choiceSet(base, [1, 4, 5]),
+        answer: String(base),
+        hint: "相鄰差＝" + base + "。",
+        tipWrong: "差＝基數，唔係「第幾個」相差 1。"
+      });
+      bank.push(closestQ(base, "最接近"));
+    } else {
+      // challenge
+      bank.push({
+        id: "L3C-fixed1", type: "closest", typeLabel: "最接近・課文",
+        q: "哪一個 17 的倍數最接近 50？",
+        mode: "single",
+        choices: ["34", "51", "17", "50"],
+        answer: "51",
+        hint: "34 差 16；51 差 1 → 51。",
+        tipWrong: "最接近唔等於「不大於」——可以大過目標（好似 51>50）。"
+      });
+      // reverse with dynamic base: pick nth 4 or 5
+      const revN = pickOne([4, 5]);
+      const revMultiple = base * revN;
+      bank.push({
+        id: "L3C2", type: "reverse", typeLabel: "反求基數",
+        q: "某數的第 " + revN + " 個倍數是 " + revMultiple + "。這個數（基數）是多少？",
+        mode: "single",
+        choices: choiceSet(base, [base - 1, base + 1, revMultiple, revN]),
+        answer: String(base),
+        hint: "第 " + revN + " 個＝基數×" + revN + "＝" + revMultiple + " → 基數＝" + revMultiple + "÷" + revN + "＝" + base + "。",
+        tipWrong: "反過來：已知倍數同「第幾個」，求基數＝倍數÷第幾個。"
+      });
+      bank.push({
+        id: "L3C3", type: "diff", typeLabel: "相鄰差",
+        q: base + " 的第 5 個倍數同第 6 個倍數相差多少？",
+        mode: "single",
+        choices: choiceSet(base, [1, 5, base * 5]),
+        answer: String(base),
+        hint: "相鄰差＝基數＝" + base + "。",
+        tipWrong: "練「差＝基數」同「最接近」一齊用。"
+      });
+      bank.push(closestQ(base, "最接近"));
+      // floorMax distinction with dynamic base
+      const floorTarget = closestTargetFor(base);
+      // use a target where closest is ABOVE target, so floorMax differs
+      let floorT = floorTarget.target;
+      let floorAns = Math.floor(floorT / base) * base;
+      if (floorAns < base) floorAns = base;
+      let closestAns = closestMultiple(base, floorT);
+      // ensure they differ for teaching contrast
+      let guard = 0;
+      while (closestAns === floorAns && guard < 20) {
+        const info2 = closestTargetFor(base);
+        floorT = info2.target;
+        floorAns = Math.max(base, Math.floor(floorT / base) * base);
+        closestAns = closestMultiple(base, floorT);
+        guard++;
+      }
+      bank.push({
+        id: "L3C5", type: "floorMax", typeLabel: "不大於・區分題",
+        q: "【注意問法】不大於 " + floorT + " 的、最大的 " + base + " 的倍數是多少？（呢題唔係問「最接近」）",
+        mode: "single",
+        choices: choiceSet(floorAns, [closestAns, base, floorT, floorAns + base]),
+        answer: String(floorAns),
+        hint: "「不大於 " + floorT + "」＝≤" + floorT + "。" +
+              (closestAns > floorT ? closestAns + ">" + floorT + " 唔得，所以係 " + floorAns + "。" : "答案係 " + floorAns + "。") +
+              " 同「最接近」可能唔同！",
+        tipWrong: "題幹寫「不大於」→ 唔可以選大過 " + floorT + " 嘅倍數。呢題同「最接近」答案可能唔同，讀清條件！"
+      });
+      const revN2 = revN === 4 ? 5 : 4;
+      const revMultiple2 = base * revN2;
+      bank.push({
+        id: "L3C6", type: "reverse", typeLabel: "反求基數",
+        q: "某數的第 " + revN2 + " 個倍數是 " + revMultiple2 + "。這個數是多少？",
+        mode: "single",
+        choices: choiceSet(base, [base - 1, base + 1, revMultiple2]),
+        answer: String(base),
+        hint: "基數＝" + revMultiple2 + "÷" + revN2 + "＝" + base + "。",
+        tipWrong: "倍數÷第幾個＝基數。"
+      });
+    }
+    return bank;
+  }
+
+  function buildBank(lessonNum, levelKey, base, migrateBase) {
+    if (lessonNum === 1) return buildLesson1(levelKey, base, migrateBase);
+    if (lessonNum === 2) return buildLesson2(levelKey, base);
+    return buildLesson3(levelKey, base);
   }
 
   function startGame() {
-    const bank = LESSONS[lesson].banks[level];
+    const base = pickBase(lesson, level);
+    const migrateBase = pickMigrateBase(base, lesson, level);
+    roundBase = base;
+    const bank = buildBank(lesson, level, base, migrateBase);
     const n = Math.min(QUESTIONS_PER_ROUND, bank.length);
-    // Keep pedagogical order for lesson banks (curriculum sequence), but allow mild shuffle within
-    // For MVP: use bank order so dual-column intro comes first; if more than n, take first n after light shuffle of tail
     if (bank.length <= n) {
       queue = bank.slice();
     } else {
-      // Keep first 2 in relative order (warm-up), shuffle rest, take enough
+      // Keep first 2 warm-up in order; shuffle rest
       const head = bank.slice(0, 2);
       const tail = shuffle(bank.slice(2));
       queue = head.concat(tail).slice(0, n);
@@ -974,7 +1182,7 @@
     answered = false;
     multiSelected = new Set();
     const q = queue[qIndex];
-    const L = LESSONS[lesson];
+    const L = LESSON_META[lesson];
     const lm = LEVEL_META[level];
 
     $("progress-fill").style.width = (qIndex / queue.length * 100) + "%";
@@ -984,6 +1192,7 @@
     const badge = $("level-badge");
     badge.textContent = lm.emoji + " " + lm.name;
     badge.className = "badge " + lm.badge;
+    $("base-badge").textContent = "本局基數 " + roundBase;
 
     $("type-tag").textContent = q.typeLabel;
     $("question-text").textContent = q.q;
@@ -1150,7 +1359,8 @@
     const ul = $("summary-list");
     ul.innerHTML = "";
     const li0 = document.createElement("li");
-    li0.textContent = "本局：第" + lesson + "節「" + LESSONS[lesson].name + "」· " + LEVEL_META[level].name;
+    li0.textContent = "本局：第" + lesson + "節「" + LESSON_META[lesson].name + "」· " +
+      LEVEL_META[level].name + " · 主基數 " + roundBase;
     ul.appendChild(li0);
     const types = {};
     resultsLog.forEach((r) => {
@@ -1164,9 +1374,20 @@
       ul.appendChild(li);
     });
     const tip = document.createElement("li");
-    tip.textContent = LESSONS[lesson].goal;
+    tip.textContent = LESSON_META[lesson].goal;
     ul.appendChild(tip);
   }
+
+  // Expose for node self-test harness (optional)
+  window.__MULTI_TEST__ = {
+    pickBase: pickBase,
+    pickMigrateBase: pickMigrateBase,
+    buildBank: buildBank,
+    closestMultiple: closestMultiple,
+    lastBases: lastBases,
+    BASE_RANGES: BASE_RANGES,
+    LESSON_META: LESSON_META
+  };
 })();
 </script>
 </body>
